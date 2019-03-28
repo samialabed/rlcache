@@ -15,3 +15,4 @@ dependencies:
    - rlgraph
    - matplotlib
    - faker
+   - flask
