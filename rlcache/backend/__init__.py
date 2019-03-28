@@ -2,8 +2,7 @@ from abc import ABC
 
 """
 TODO:
-    - Incorporate a max-size to force more ejection
-    
+    - Write tests once things settled and you have a RL env
 """
 
 
