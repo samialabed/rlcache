@@ -8,7 +8,7 @@ CachedEntry = namedtuple('CacheEntry', ['value', 'expiration'])
 
 class InMemoryCache(Cache):
 
-    def __init__(self, capacity):
+    def __init__(self, capacity=1024):
         super().__init__(capacity)
         self.memory = {}
         self.expiration = {}
