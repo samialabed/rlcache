@@ -1,0 +1,17 @@
+name: rlcache
+dependencies:
+ - python
+ - numpy
+ - docopt
+ - urllib3
+ - jupyter
+ - pydot
+ - graphviz
+ - tensorflow-gpu
+ - pip:
+   - sklearn
+   - watermark
+   - jupyter_tensorboard
+   - rlgraph
+   - matplotlib
+   - faker
