@@ -14,9 +14,11 @@ class LRUCache:
 
     def get(self, key):
         # BUG if get and not in cache this will fail key error
-        self.lru[key] = self.tm
-        self.tm += 1
-        return self.cache.get(key)
+        if key in self.lru:
+            self.lru[key] = self.tm
+            self.tm += 1
+            return self.cache.get(key)
+        return None
 
     def set(self, key, value):
         if self.cache.size() >= self.cache.capacity:
@@ -28,3 +30,7 @@ class LRUCache:
         self.lru[key] = self.tm
         self.tm += 1
         return True
+
+    def delete(self, key):
+        self.lru.pop(key)
+        return self.cache.delete(key)
