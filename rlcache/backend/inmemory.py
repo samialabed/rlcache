@@ -11,7 +11,6 @@ class InMemoryCache(Cache):
     def __init__(self, capacity=1024):
         super().__init__(capacity)
         self.memory = {}
-        self.expiration = {}
 
     def get(self, key, default=None):
         if time.time() > self.memory[key].expiration:
@@ -34,8 +33,7 @@ class InMemoryCache(Cache):
         return True
 
     def clear(self):
-        del self.memory
-        self.memory = {}
+        self.memory.clear()
         return True
 
     def size(self):

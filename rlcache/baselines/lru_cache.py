@@ -34,3 +34,16 @@ class LRUCache:
     def delete(self, key):
         self.lru.pop(key)
         return self.cache.delete(key)
+
+    def clear(self):
+        self.cache.clear()
+        self.lru.clear()
+
+    def size(self):
+        return self.cache.size()
+
+    def stats(self):
+        return {
+            'size': self.cache.size(),
+            'capacity': self.cache.capacity,
+        }
