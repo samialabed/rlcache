@@ -47,3 +47,6 @@ class LRUCache:
             'size': self.cache.size(),
             'capacity': self.cache.capacity,
         }
+
+    def contains(self, key):
+        return self.cache.contains(key)
