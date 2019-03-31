@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from backend import Storage
+from backend.base import Storage
 from eviction_strategies.eviction_strategy_base import EvictionStrategy
 from observers.observer import Observer, ObservationType
 
@@ -19,8 +19,7 @@ class LRUObserver(Observer):
 
 
 class LRUEvictionStrategy(EvictionStrategy):
-    def __init__(self, cache: Storage):
-        super().__init__(cache)
+    def __init__(self):
         self._observer = LRUObserver()
 
     def observer(self):

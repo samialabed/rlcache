@@ -1,7 +1,7 @@
 from collections import Counter
 from typing import Dict
 
-from backend import Storage
+from backend.base import Storage
 from cache_constants import CacheStatus
 from caching_strategies.caching_strategy_base import CachingStrategy
 from eviction_strategies.eviction_strategy_base import EvictionStrategy
@@ -28,7 +28,8 @@ class CacheManager(object):
                                       'cache_size': 0})
         # get the observers from our strategies
         self.observers = ObserverContainer([strategy.observer() for strategy in
-                                            [self.caching_strategy, self.eviction_strategy, self.ttl_strategy]])
+                                            [self.caching_strategy, self.eviction_strategy, self.ttl_strategy]
+                                            if strategy.observer() is not None])
 
     def get(self, key: str) -> Dict[str, any]:
         self.observers.observe(key, ObservationType.Read)
@@ -53,8 +54,9 @@ class CacheManager(object):
         self._set(key, values, status)
 
     def delete(self, key):
-        self.observers.observe(key, ObservationType.Eviction)
-        self.cache.delete(key)
+        if self.cache.contains(key):
+            self.observers.observe(key, ObservationType.Eviction)
+            self.cache.delete(key)
 
     def stats(self) -> Dict[str, str]:
         return self.cache_metrics

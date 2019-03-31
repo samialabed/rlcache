@@ -3,14 +3,19 @@ from collections import Counter
 
 from flask import Flask, request, jsonify
 
-from backend.inmemory import InMemoryStorage
-from eviction_strategies.lru_cache import LRUCache
+from cache_manager import CacheManager
+from caching_strategies.simple_strategies import OnReadWriteCacheStrategy
+from eviction_strategies.lru_eviction_strategy import LRUEvictionStrategy
+from rlcache.backend.inmemory import InMemoryStorage
+from ttl_selection_strategies.ttl_strategy_fixed import FixedTtlStrategy
 
 """
 TODOs:
-    - Take in a config file and parse it for various cache strategy.
+    - Take in a config file and parse it for various cache strategy. each strategy has settings dict.
     - FULL REFACTOR OF THIS, server stuff should be in a class. The counters can be an aspect?
     - Replace print with logger
+    - Difference between insert and update?
+    - Distinquish between /close for load and /close for workload
 """
 
 database_capacity = 1000000
@@ -18,16 +23,16 @@ cache_capacity = 10000
 cache_backend = InMemoryStorage(cache_capacity)
 database_backend = InMemoryStorage(database_capacity)
 
-cache = LRUCache(cache_backend)
+cache_manager = CacheManager(caching_strategy=OnReadWriteCacheStrategy(),
+                             eviction_strategy=LRUEvictionStrategy(),
+                             ttl_strategy=FixedTtlStrategy(300),
+                             cache=cache_backend,
+                             backend=database_backend)
 
 app = Flask('cache_manager_server')
 
 experiment_info = {'cache_fixed_capacity': str(cache_capacity),
                    'database_fixed_capacity': str(database_capacity)},
-cache_metrics = Counter({'cache_hits': 0,
-                         'cache_miss': 0,
-                         'cache_invalidation': 0,
-                         'cache_size': 0})
 requests_counter = Counter()
 
 
@@ -39,15 +44,14 @@ def hello_world():
 @app.route('/delete', methods=['DELETE'])
 def delete():
     path = str(request.path)
-    cache_metrics['request_counter'][path] += 1
+    requests_counter[path] += 1
     req_data = request.get_json()
     key = req_data['key']
-    if cache.contains(key):
-        # TODO punish for invalidation
-        cache_metrics['cache_invalidation'] += 1
-    status = cache.delete(key)
+
+    cache_manager.delete(key)
     database_backend.delete(key)
-    response = {'key': key, 'deleted': status}
+
+    response = {'key': key, 'values': {'deleted': 'True'}}
     print("Results of delete: {}".format(response))
     return jsonify(response)
 
@@ -69,16 +73,7 @@ def get():
     key = req_data['key']
     print("Get: {}".format(req_data))
 
-    results = cache.get(key)
-    if not results:
-        # TODO this should be an interface and swap in RLCache vs dummy
-        results = database_backend.get(key)  # retrieve from DB on failure of read
-        cache.set(key, results)
-        cache_metrics['cache_miss'] += 1
-        # TODO record a cache miss
-    else:
-        cache_metrics['cache_hits'] += 1
-        # record a cache hit, an end of an experience
+    results = cache_manager.get(key)
 
     response = {'key': key, 'values': results}
     print("Results of get: {}".format(response))
@@ -94,12 +89,7 @@ def update():
     print("Update: {}".format(req_data))
     values = req_data['values']
 
-    if cache.contains(key):
-        # TODO punish for invalidation
-        cache_metrics['cache_invalidation'] += 1
-
-    # TODO caching strategy, cache on write?
-    cache.set(key, values)
+    cache_manager.set(key, values)
     database_backend.set(key, values)
 
     return 'Success'
@@ -113,11 +103,9 @@ def insert():
     req_data = request.get_json()
     print("Insert: {}".format(req_data))
     key = req_data['key']
-    if cache.contains(key):
-        # TODO punish for invalidation
-        cache_metrics['cache_invalidation'] += 1
-    # TODO caching strategy, cache on write?
-    cache.set(key, req_data['values'])
+    values = req_data['values']
+
+    cache_manager.set(key, values)
     database_backend.set(key, req_data['values'])
 
     return 'Success'
@@ -125,9 +113,9 @@ def insert():
 
 @app.route('/stats', methods=['GET'])
 def stats():
-    return jsonify({'cache_state': cache.state(),
+    return jsonify({'cache_stats': cache_manager.stats(),
+                    'cache_size': cache_manager.cache.size(),
                     'database_size': database_backend.size(),
-                    'stats': cache_metrics,
                     'requests_counter': requests_counter,
                     'experiment_info': experiment_info
                     })

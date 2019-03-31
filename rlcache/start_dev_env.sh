@@ -2,5 +2,6 @@
 
 export FLASK_APP="cache_manager_server"
 export FLASK_ENV="development"
+export PYTHONPATH=$(pwd)
 
 flask run

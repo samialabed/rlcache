@@ -2,7 +2,7 @@ from collections import namedtuple
 
 import time
 
-from backend import Storage
+from backend.base import Storage
 
 CachedEntry = namedtuple('CacheEntry', ['value', 'expiration'])
 
