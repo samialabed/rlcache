@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import Dict
 
 """
 TODO:
@@ -6,26 +7,29 @@ TODO:
 """
 
 
-class Cache(ABC):
+class Storage(ABC):
     def __init__(self, capacity):
         self.capacity = capacity
 
-    def get(self, key, default=None):
+    def get(self, key: str, default=None) -> Dict[str, any]:
         raise NotImplementedError
 
-    def set(self, key, value, ttl=500):
+    def set(self, key: str, value, ttl: int = 500) -> bool:
         raise NotImplementedError
 
-    def delete(self, key):
+    def delete(self, key: str) -> bool:
         raise NotImplementedError
 
-    def clear(self):
+    def clear(self) -> bool:
         raise NotImplementedError
 
-    def size(self):
+    def size(self) -> int:
         raise NotImplementedError
 
-    def contains(self, key):
+    def contains(self, key: str) -> bool:
+        raise NotImplementedError
+
+    def is_full(self) -> bool:
         raise NotImplementedError
 
 

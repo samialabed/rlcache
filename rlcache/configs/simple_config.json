@@ -1,0 +1,14 @@
+{
+  "experiment_name": "Fixed simple strategy",
+  "caching_strategy": "read_write",
+  "ttl_strategy": "fixed",
+  "eviction_strategy": "lru",
+  "cache_backend_settings": {
+    "type": "inmemory",
+    "capacity": 5000
+  },
+  "database_backend_settings": {
+    "type": "inmemory",
+    "capacity": 1000000000
+  }
+}

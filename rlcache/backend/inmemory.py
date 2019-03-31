@@ -1,12 +1,13 @@
-import time
 from collections import namedtuple
 
-from backend import Cache, OutOfMemoryError
+import time
+
+from backend import Storage
 
 CachedEntry = namedtuple('CacheEntry', ['value', 'expiration'])
 
 
-class InMemoryCache(Cache):
+class InMemoryStorage(Storage):
 
     def __init__(self, capacity=1024):
         super().__init__(capacity)
@@ -22,7 +23,7 @@ class InMemoryCache(Cache):
 
     def set(self, key, value, ttl=500):
         if len(self.memory) > self.capacity:
-            raise OutOfMemoryError
+            raise False
         expiration_ttl = time.time() + ttl
         self.memory[key] = CachedEntry(value, expiration_ttl)
         return True
@@ -30,7 +31,8 @@ class InMemoryCache(Cache):
     def delete(self, key):
         if key in self.memory:
             del self.memory[key]
-        return True
+            return True
+        return False
 
     def clear(self):
         self.memory.clear()
