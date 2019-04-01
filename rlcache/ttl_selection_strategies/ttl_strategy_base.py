@@ -1,11 +1,15 @@
 from abc import ABC
-from typing import Union
+from typing import Union, Dict
 
 from observers.observer import Observer
 
 
 class TtlStrategy(ABC):
-    def estimate_ttl(self, key) -> int:
+    def __init__(self, config: Dict[str, any]):
+        self.config = config
+
+    def estimate_ttl(self, key: str) -> int:
+        """Estimates a time to live based on the key."""
         raise NotImplementedError
 
     def observer(self) -> Union[Observer, None]:

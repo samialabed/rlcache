@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from typing import Dict
 
 from backend.base import Storage
 from eviction_strategies.eviction_strategy_base import EvictionStrategy
@@ -19,7 +20,8 @@ class LRUObserver(Observer):
 
 
 class LRUEvictionStrategy(EvictionStrategy):
-    def __init__(self):
+    def __init__(self, config: Dict[str, any]):
+        super().__init__(config)
         self._observer = LRUObserver()
 
     def observer(self):

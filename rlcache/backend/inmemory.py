@@ -1,16 +1,19 @@
 from collections import namedtuple
+from typing import Dict
 
 import time
 
 from backend.base import Storage
 
-CachedEntry = namedtuple('CacheEntry', ['value', 'expiration'])
+# BLOCKED FOR TTL IMPLEMENTATION
+# TODO make this expires https://stackoverflow.com/questions/3927166/automatically-expiring-variable
+MemoryEntry = namedtuple('MemoryEntry', ['value', 'expiration'])
 
 
 class InMemoryStorage(Storage):
 
-    def __init__(self, capacity=1024):
-        super().__init__(capacity)
+    def __init__(self, config: Dict[str, any]):
+        super().__init__(config)
         self.memory = {}
 
     def get(self, key, default=None):
@@ -25,7 +28,7 @@ class InMemoryStorage(Storage):
         if len(self.memory) > self.capacity:
             raise False
         expiration_ttl = time.time() + ttl
-        self.memory[key] = CachedEntry(value, expiration_ttl)
+        self.memory[key] = MemoryEntry(value, expiration_ttl)
         return True
 
     def delete(self, key):

@@ -8,7 +8,8 @@ TODO:
 
 
 class Storage(ABC):
-    def __init__(self, capacity):
+    def __init__(self, config: Dict[str, any]):
+        capacity = config['capacity']  # all should implement capacity
         self.capacity = capacity
 
     def get(self, key: str, default=None) -> Dict[str, any]:

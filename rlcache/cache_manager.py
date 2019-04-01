@@ -3,22 +3,18 @@ from typing import Dict
 
 from backend.base import Storage
 from cache_constants import CacheStatus
-from caching_strategies.caching_strategy_base import CachingStrategy
-from eviction_strategies.eviction_strategy_base import EvictionStrategy
+from caching_strategies import caching_strategy_from_config
+from eviction_strategies import eviction_strategy_from_config
 from observers.observer import ObserverContainer, ObservationType
-from ttl_selection_strategies.ttl_strategy_base import TtlStrategy
+from ttl_selection_strategies import ttl_strategy_from_config
 
 
 class CacheManager(object):
-    def __init__(self,
-                 caching_strategy: CachingStrategy,
-                 eviction_strategy: EvictionStrategy,
-                 ttl_strategy: TtlStrategy,
-                 cache: Storage,
-                 backend: Storage):
-        self.caching_strategy = caching_strategy
-        self.eviction_strategy = eviction_strategy
-        self.ttl_strategy = ttl_strategy
+    def __init__(self, config: Dict[str, any], cache: Storage, backend: Storage):
+
+        self.caching_strategy = caching_strategy_from_config(config['caching_strategy_settings'])
+        self.eviction_strategy = eviction_strategy_from_config(config['eviction_strategy_settings'])
+        self.ttl_strategy = ttl_strategy_from_config(config['ttl_strategy_settings'])
         self.cache = cache
         self.backend = backend
         # TODO move metrics to own class?
