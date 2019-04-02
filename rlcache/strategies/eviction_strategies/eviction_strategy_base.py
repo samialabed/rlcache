@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Union, Dict
+from typing import Dict
 
 from backend.base import Storage
 from observers.observer import Observer
@@ -13,6 +13,6 @@ class EvictionStrategy(ABC):
         """ Called when cache is full, finds an item to evict from the cache and evict it."""
         raise NotImplementedError
 
-    def observer(self) -> Union[Observer, None]:
+    def observer(self) -> Observer:
         """Returns an observer implementation that can be called on various methods."""
-        return None
+        pass

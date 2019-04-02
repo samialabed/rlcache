@@ -2,8 +2,8 @@ from collections import OrderedDict
 from typing import Dict
 
 from backend.base import Storage
-from eviction_strategies.eviction_strategy_base import EvictionStrategy
 from observers.observer import Observer, ObservationType
+from strategies.eviction_strategies.eviction_strategy_base import EvictionStrategy
 
 
 class LRUObserver(Observer):

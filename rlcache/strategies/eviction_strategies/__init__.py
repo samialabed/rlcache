@@ -1,6 +1,6 @@
 from typing import Dict
 
-from eviction_strategies.lru_eviction_strategy import LRUEvictionStrategy
+from strategies.eviction_strategies.lru_eviction_strategy import LRUEvictionStrategy
 
 
 def eviction_strategy_from_config(config: Dict[str, any]):

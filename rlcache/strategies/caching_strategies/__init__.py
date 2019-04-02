@@ -1,6 +1,6 @@
 from typing import Dict
 
-from caching_strategies.simple_strategies import OnReadWriteCacheStrategy, OnReadOnlyCacheStrategy
+from strategies.caching_strategies.simple_strategies import OnReadWriteCacheStrategy, OnReadOnlyCacheStrategy
 
 
 def caching_strategy_from_config(config: Dict[str, any]):

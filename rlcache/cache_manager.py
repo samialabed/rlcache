@@ -3,10 +3,10 @@ from typing import Dict
 
 from backend.base import Storage
 from cache_constants import CacheStatus
-from caching_strategies import caching_strategy_from_config
-from eviction_strategies import eviction_strategy_from_config
+from strategies.caching_strategies import caching_strategy_from_config
+from strategies.eviction_strategies import eviction_strategy_from_config
 from observers.observer import ObserverContainer, ObservationType
-from ttl_selection_strategies import ttl_strategy_from_config
+from strategies.ttl_selection_strategies import ttl_strategy_from_config
 
 
 class CacheManager(object):

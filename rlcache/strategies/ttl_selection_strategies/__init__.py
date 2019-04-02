@@ -1,6 +1,6 @@
 from typing import Dict
 
-from ttl_selection_strategies.ttl_strategy_fixed import FixedTtlStrategy
+from strategies.ttl_selection_strategies.ttl_strategy_fixed import FixedTtlStrategy
 
 
 def ttl_strategy_from_config(config: Dict[str, any]):

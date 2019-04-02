@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Union, Dict
+from typing import Dict
 
 from observers.observer import Observer
 
@@ -12,6 +12,6 @@ class TtlStrategy(ABC):
         """Estimates a time to live based on the key."""
         raise NotImplementedError
 
-    def observer(self) -> Union[Observer, None]:
+    def observer(self) -> Observer:
         """Returns an observer implementation that can be called on various methods."""
-        return None
+        pass
