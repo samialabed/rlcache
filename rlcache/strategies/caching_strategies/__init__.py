@@ -1,9 +1,13 @@
 from typing import Dict
 
-from strategies.caching_strategies.simple_strategies import OnReadWriteCacheStrategy, OnReadOnlyCacheStrategy
+from rlcache.strategies.caching_strategies.caching_strategy_base import CachingStrategy
+from rlcache.strategies.caching_strategies.rl_caching_strategy import RLCachingStrategy
+from rlcache.strategies.caching_strategies.simple_strategies import OnReadWriteCacheStrategy, OnReadOnlyCacheStrategy
+
+_supported_type = ['read_write', 'read_only', 'rl_driven']
 
 
-def caching_strategy_from_config(config: Dict[str, any]):
+def caching_strategy_from_config(config: Dict[str, any]) -> CachingStrategy:
     # This is super hacky but anything more complicated requires better python experience.
     # TODO interesting summer refactoring.
 
@@ -12,3 +16,7 @@ def caching_strategy_from_config(config: Dict[str, any]):
         return OnReadWriteCacheStrategy(config)
     elif caching_strategy_type == "read_only":
         return OnReadOnlyCacheStrategy(config)
+    elif caching_strategy_type == 'rl_driven':
+        return RLCachingStrategy(config)
+    else:
+        raise NotImplementedError("Type passed isn't one of the supported types: {}".format(_supported_type))

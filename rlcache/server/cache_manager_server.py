@@ -1,6 +1,6 @@
 from flask import request, jsonify
 
-from server import app, CONFIG, REQUESTS_COUNTER, CACHE_MANAGER, DATABASE_BACKEND
+from rlcache.server import app, CONFIG, REQUESTS_COUNTER, CACHE_MANAGER, DATABASE_BACKEND
 
 
 # TODO Replace print with logger

@@ -1,8 +1,8 @@
 from abc import ABC
 from typing import Dict
 
-from backend.base import Storage
-from observers.observer import Observer
+from rlcache.backend.base import Storage
+from rlcache.observers.observer import Observer
 
 
 class EvictionStrategy(ABC):

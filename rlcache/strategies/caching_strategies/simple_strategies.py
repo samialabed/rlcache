@@ -1,7 +1,7 @@
 from typing import Dict
 
-from cache_constants import CacheStatus
-from strategies.caching_strategies.caching_strategy_base import CachingStrategy
+from rlcache.cache_constants import CacheStatus
+from rlcache.strategies.caching_strategies.caching_strategy_base import CachingStrategy
 
 
 class OnReadWriteCacheStrategy(CachingStrategy):

@@ -1,6 +1,6 @@
 from typing import Dict
 
-from strategies.ttl_selection_strategies.ttl_strategy_base import TtlStrategy
+from rlcache.strategies.ttl_selection_strategies.ttl_strategy_base import TtlStrategy
 
 
 class FixedTtlStrategy(TtlStrategy):

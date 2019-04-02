@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import Dict
 
-from observers.observer import Observer
+from rlcache.observers.observer import Observer
 
 
 class TtlStrategy(ABC):

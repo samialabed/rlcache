@@ -3,10 +3,11 @@ from typing import Dict
 
 import time
 
-from backend.base import Storage
+from rlcache.backend.base import Storage
 
 # BLOCKED FOR TTL IMPLEMENTATION
 # TODO make this expires https://stackoverflow.com/questions/3927166/automatically-expiring-variable
+# TODO Make permanent memory and expirying one
 MemoryEntry = namedtuple('MemoryEntry', ['value', 'expiration'])
 
 

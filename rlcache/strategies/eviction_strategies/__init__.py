@@ -1,6 +1,6 @@
 from typing import Dict
 
-from strategies.eviction_strategies.lru_eviction_strategy import LRUEvictionStrategy
+from rlcache.strategies.eviction_strategies.lru_eviction_strategy import LRUEvictionStrategy
 
 
 def eviction_strategy_from_config(config: Dict[str, any]):
@@ -10,3 +10,5 @@ def eviction_strategy_from_config(config: Dict[str, any]):
     eviction_strategy_type = config['type']
     if eviction_strategy_type == "lru":
         return LRUEvictionStrategy(config)
+    else:
+        raise NotImplementedError

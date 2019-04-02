@@ -1,8 +1,8 @@
 from abc import ABC
 from typing import Dict
 
-from cache_constants import CacheStatus
-from observers.observer import Observer
+from rlcache.cache_constants import CacheStatus
+from rlcache.observers.observer import Observer
 
 
 class CachingStrategy(ABC):

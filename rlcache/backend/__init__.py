@@ -1,6 +1,6 @@
 from typing import Dict
 
-from backend.inmemory import InMemoryStorage
+from rlcache.backend.inmemory import InMemoryStorage
 
 
 def storage_from_config(config: Dict[str, any]):
