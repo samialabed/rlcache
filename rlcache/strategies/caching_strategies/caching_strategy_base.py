@@ -9,7 +9,7 @@ class CachingStrategy(ABC):
     def __init__(self, config: Dict[str, any]):
         self.config = config
 
-    def should_cache(self, key: str, values: Dict[str, str], invalidation: CacheStatus) -> bool:
+    def should_cache(self, key: str, values: Dict[str, str], cache_status: CacheStatus) -> bool:
         raise NotImplementedError
 
     def observer(self) -> Observer:

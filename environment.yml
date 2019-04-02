@@ -8,6 +8,7 @@ dependencies:
  - pydot
  - graphviz
  - tensorflow-gpu
+ - tensorflow-probability
  - pip:
    - sklearn
    - watermark
@@ -16,3 +17,4 @@ dependencies:
    - matplotlib
    - faker
    - flask
+   - gym
