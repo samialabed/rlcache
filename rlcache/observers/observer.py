@@ -3,13 +3,14 @@ from enum import Enum
 
 from typing import List, Dict
 
+from rlcache.backend import TTLCache
+
 
 class ObservationType(Enum):
-    Read = 1
-    Write = 2
-    Update = 3  # TODO do I need update?
-    Eviction = 4
-    Expiration = 5  # Signal terminal
+    Hit = 1
+    Miss = 2
+    Invalidate = 3
+    Expiration = 4  # Signal terminal
 
 
 class Observer(ABC):
@@ -20,8 +21,9 @@ class Observer(ABC):
         raise NotImplementedError
 
 
-class ObserverContainer(object):
-    def __init__(self, observers: List[Observer]):
+class ObserversOrchestrator(object):
+    def __init__(self, expiring_memory: TTLCache, observers: List[Observer]):
+        self.expiring_memory = expiring_memory
         self.observers = observers
 
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any] = None):

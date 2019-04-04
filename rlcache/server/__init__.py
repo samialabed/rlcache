@@ -15,8 +15,7 @@ with open(config_file, 'r') as fp:
     CONFIG = json.load(fp)
 
 DATABASE_BACKEND = storage_from_config(CONFIG['database_backend_settings'])
-CACHE_BACKEND = storage_from_config(CONFIG['cache_backend_settings'])
 CACHE_MANAGER = CacheManager(config=CONFIG['cache_manager_settings'],
-                             cache=CACHE_BACKEND,
+                             cache_config=CONFIG['cache_backend_settings'],
                              backend=DATABASE_BACKEND)
 REQUESTS_COUNTER = Counter()

@@ -3,7 +3,7 @@ import collections
 from time import monotonic
 
 from rlcache.backend.base import Storage
-from rlcache.observers.observer import Observer, ObservationType
+from rlcache.observers.observer import ObservationType, ObserversOrchestrator
 
 
 class ExpiredKeyError(KeyError):
@@ -21,8 +21,8 @@ TODO [LP] refactor to use Python Magic.
 class TTLCache(object):
     """LRU Cache implementation with per-item time-to-live (TTL) value."""
 
-    def __init__(self, memory: Storage, observer: Observer):
-        self.observer = observer
+    def __init__(self, memory: Storage, observers_orchestrator: ObserversOrchestrator):
+        self.observers_orchestrator = observers_orchestrator
         self.memory = memory
         self.__root = root = _Link()
         root.prev = root.next = root
@@ -126,7 +126,7 @@ class TTLCache(object):
         links = self.__links
         while curr is not root and curr.expire < time:
             self.memory.delete(curr.key)
-            self.observer.observe(curr.key, ObservationType.Expiration, {'expire_at': curr.expire})
+            self.observers_orchestrator.observe(curr.key, ObservationType.Expiration, {'expire_at': curr.expire})
             del links[curr.key]
             next_link = curr.next
             curr.unlink()

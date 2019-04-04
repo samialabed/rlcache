@@ -1,56 +1,38 @@
+from collections import namedtuple
 from typing import Dict, List
-from typing import NamedTuple
 
 import numpy as np
 from rlgraph.agents import Agent
 from rlgraph.spaces import FloatBox, IntBox
 
-from rlcache.cache_constants import CacheStatus
+from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observers.observer import Observer, ObservationType
 from rlcache.rl_model.converter import RLConverter
 from rlcache.strategies.caching_strategies.caching_strategy_base import CachingStrategy
 from rlcache.utils.vocabulary import Vocabulary
 
 """
+
+How to know a non-cached entry, that didn't get any more reads or write, is a good entry to not cache. 
+
     TODOs:
-        - [HP] Figure out how the observer should really behave. draw a diagram 
-        - Observer - enqueues an incomplete experience 
-        - Observer - 
+        - shared_stats: extract information for should_cache from shared_stats
         - Reward - calculate reward based on hits and misses for the key
         - Pass more information to the state: cache_stats and capacity
         - [LP] Sunday: this should be refactored once second agent is developed and common functionality is taken out
         - [LP] Reward - Look into using other metrics than hits and miss
-        
+        - Debugging: states_per_key: key -> [hits, miss] and possibly used in should_cache
     initially - I don't need to pass the result set because YCSB generates rubbish, until I build my own workload
     I can remove that.
 """
 
 
-class KeyState(NamedTuple):
-    hits: int = 0
-    misses: int = 0
+class RLCachingStrategy(CachingStrategy, Observer):
+    IncompleteExperienceEntry = namedtuple('IncompleteExperienceEntry', ('state', 'agent_action', 'hits', 'miss'))
 
-
-class RLCachingStrategyObserver(Observer):
-
-    def __init__(self, shared_stats: Dict[str, int]):
-        super().__init__(shared_stats)
-        self.incomplete_experience_queue = []  # TODO figure out the data-structure for this, should self expire.
-        # states_per_key: key -> [hits, miss]
-        self.states_per_key = {}  # type: Dict[str, KeyState]
-
-    def observe(self, key: str, observation_type: ObservationType, **kwargs):
-        # Based on observation type save in different queues?
-
-        pass
-
-    def save_action(self, state, action):
-        pass
-
-
-class RLCachingStrategy(CachingStrategy):
-    def __init__(self, config: Dict[str, any]):
+    def __init__(self, config: Dict[str, any], shared_stats: CacheInformation):
         super().__init__(config)
+        self.shared_stats = shared_stats
         self.converter = CachingStrategyRLConverter()
 
         num_indexes = config['num_fields']
@@ -58,14 +40,24 @@ class RLCachingStrategy(CachingStrategy):
         flattened_num_cols = 1 + num_indexes + 1  # num_indexes + key +  cache_status
 
         # action space: should cache: true or false
-        # TODO investigate adding cache miss per key to state_space
         # state space: [capacity (1), query key(1), query result set(num_indexes)]
-        # TODO state space and action_space are floatbox and intbox because bug in rlgraph.
+        # NOTE: state space and action_space are floatbox and intbox because bug in rlgraph.
         self.agent = Agent.from_spec(agent_config,
                                      state_space=FloatBox(shape=(flattened_num_cols,)),
                                      action_space=IntBox(2, shape=(1,)))
 
-    def observer(self, shared_stats) -> Observer:
+        self._incomplete_experience = {}  # type: Dict[str, RLCachingStrategy.IncompleteExperienceEntry]
+
+    def should_cache(self, key: str, values: Dict[str, str], cache_status: OperationType) -> bool:
+        # save the action taken, and the experience
+
+        state = self.converter.system_to_agent_state(key, values, cache_status)
+        agent_action = self.agent.get_action(state)
+        action = self.converter.agent_to_system_action(agent_action)
+        self._incomplete_experience[key] = self.IncompleteExperienceEntry(state=state, agent_action=agent_action)
+        return action
+
+    def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
         """
         # should maintain a dict of incomplete experiences, once it is complete, pop and put it in the agent memory.
         # queues are used by apex worker to train the agent in different threads.
@@ -78,20 +70,8 @@ class RLCachingStrategy(CachingStrategy):
             4- Shouldn't cache -> hit(s): complete experience, punish
             :param shared_stats:
         """
-        if self._observer:
-            return self._observer
-        self._observer = RLCachingStrategyObserver(shared_stats)
-        return self._observer
 
-    def should_cache(self, key: str, values: Dict[str, str], cache_status: CacheStatus) -> bool:
-        # save the action taken, and the experience
-
-        # TODO get from observer the number of times this key had cache hits or misses?
-        state = self.converter.system_to_agent_state(key, values, cache_status)
-        agent_prediction = self.agent.get_action(state)
-        action = self.converter.agent_to_system_action(agent_prediction)
-        # self._observer.save_action(state, agent_prediction)
-        return action
+        pass
 
 
 class CachingStrategyRLConverter(RLConverter):

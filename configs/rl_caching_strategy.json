@@ -9,6 +9,7 @@
     "capacity": 1000000000
   },
   "cache_manager_settings": {
+    "observer_ttl": 120,
     "caching_strategy_settings": {
       "type": "rl_driven",
       "num_fields": 10,

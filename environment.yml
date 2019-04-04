@@ -1,8 +1,10 @@
 name: rlcache
+channels:
+  - anaconda
 dependencies:
  - python
+ - pip
  - numpy
- - docopt
  - urllib3
  - jupyter
  - pydot
