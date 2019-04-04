@@ -61,8 +61,8 @@ def update():
     print("Update: {}".format(req_data))
     values = req_data['values']
 
-    CACHE_MANAGER.set(key, values)
-    DATABASE_BACKEND.set(key, values)
+    CACHE_MANAGER.set(key, values, )
+    DATABASE_BACKEND.set(key, values, )
 
     return 'Success'
 
@@ -77,8 +77,8 @@ def insert():
     key = req_data['key']
     values = req_data['values']
 
-    CACHE_MANAGER.set(key, values)
-    DATABASE_BACKEND.set(key, req_data['values'])
+    CACHE_MANAGER.set(key, values, )
+    DATABASE_BACKEND.set(key, req_data['values'], )
 
     return 'Success'
 

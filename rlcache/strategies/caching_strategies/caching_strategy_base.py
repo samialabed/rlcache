@@ -12,6 +12,8 @@ class CachingStrategy(ABC):
     def should_cache(self, key: str, values: Dict[str, str], cache_status: CacheStatus) -> bool:
         raise NotImplementedError
 
-    def observer(self) -> Observer:
-        """Returns an observer implementation that can be called on various methods."""
+    def observer(self, shared_stats) -> Observer:
+        """Returns an observer implementation that can be called on various methods.
+        :param shared_stats:
+        """
         pass

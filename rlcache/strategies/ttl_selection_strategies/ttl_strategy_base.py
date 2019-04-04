@@ -12,6 +12,6 @@ class TtlStrategy(ABC):
         """Estimates a time to live based on the key."""
         raise NotImplementedError
 
-    def observer(self) -> Observer:
+    def observer(self, shared_stats) -> Observer:
         """Returns an observer implementation that can be called on various methods."""
         pass

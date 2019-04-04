@@ -6,6 +6,7 @@ from rlcache.observers.observer import Observer
 
 
 class EvictionStrategy(ABC):
+    # TODO should this take a cache as well?
     def __init__(self, config: Dict[str, any]):
         self.config = config
 
@@ -13,6 +14,6 @@ class EvictionStrategy(ABC):
         """ Called when cache is full, finds an item to evict from the cache and evict it."""
         raise NotImplementedError
 
-    def observer(self) -> Observer:
+    def observer(self, shared_stats) -> Observer:
         """Returns an observer implementation that can be called on various methods."""
         pass

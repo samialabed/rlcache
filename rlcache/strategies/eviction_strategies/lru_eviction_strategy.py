@@ -7,10 +7,11 @@ from rlcache.strategies.eviction_strategies.eviction_strategy_base import Evicti
 
 
 class LRUObserver(Observer):
-    def __init__(self):
+    def __init__(self, shared_stats: Dict[str, int]):
+        super().__init__(shared_stats)
         self.lru = OrderedDict()
 
-    def observe(self, key: str, observation_type: ObservationType):
+    def observe(self, key: str, observation_type: ObservationType, **kwargs):
         try:
             self.lru.pop(key)
         except KeyError:
@@ -22,9 +23,11 @@ class LRUObserver(Observer):
 class LRUEvictionStrategy(EvictionStrategy):
     def __init__(self, config: Dict[str, any]):
         super().__init__(config)
-        self._observer = LRUObserver()
 
-    def observer(self):
+    def observer(self, shared_stats):
+        if self._observer:
+            return self._observer
+        self._observer = LRUObserver(shared_stats)
         return self._observer
 
     def trim_cache(self, cache: Storage):

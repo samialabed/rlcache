@@ -15,7 +15,7 @@ class Storage(ABC):
     def get(self, key: str, default=None) -> Dict[str, any]:
         raise NotImplementedError
 
-    def set(self, key: str, value, ttl: int = 500) -> bool:
+    def set(self, key: str, value) -> bool:
         raise NotImplementedError
 
     def delete(self, key: str) -> bool:

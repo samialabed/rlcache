@@ -1,4 +1,4 @@
-from typing import Dict, Sized, List, FrozenSet, Optional
+from typing import Sized, List, FrozenSet, Optional
 
 import numpy as np
 
@@ -10,8 +10,8 @@ class Vocabulary(Sized):
     """
 
     def __init__(self, add_unk: bool = True, add_pad: bool = True) -> None:
-        self.token_to_id = {}  # type: Dict[str, int]
-        self.id_to_token = []  # type: List[str]
+        self.token_to_id = {}
+        self.id_to_token = []
         if add_pad:
             self.add_or_get_id(self.get_pad())
         if add_unk:
