@@ -1,36 +1,34 @@
 import collections
+from typing import Callable, Dict
 
 from time import monotonic
 
 from rlcache.backend.base import Storage
-from rlcache.observers.observer import ObservationType, ObserversOrchestrator
+from rlcache.observers.observer import ObservationType
 
 
 class ExpiredKeyError(KeyError):
     pass
 
 
-"""
-TODO Take in storage and use it.
-TODO refactor a bit more to allow generalising for other type of backends.
-TODO [LP] refactor to use Python Magic.
-
-"""
-
-
 class TTLCache(object):
-    """LRU Cache implementation with per-item time-to-live (TTL) value."""
+    """
+    LRU Cache implementation with per-item time-to-live (TTL) value.
 
-    def __init__(self, memory: Storage, observers_orchestrator: ObserversOrchestrator):
-        self.observers_orchestrator = observers_orchestrator
+    TODO refactor a bit more to allow generalising for other type of backends.
+    TODO [LP] refactor to use Python Magic.
+    """
+
+    def __init__(self, memory: Storage):
         self.memory = memory
         self.__root = root = _Link()
         root.prev = root.next = root
         self.__links = collections.OrderedDict()
         self.__timer = _Timer(monotonic)
+        self.evict_hook_func = None
 
-    def is_full(self):
-        return self.memory.is_full()
+    def register_hook_func(self, hook: Callable[[str, ObservationType, Dict[str, any]], None]):
+        self.evict_hook_func = hook
 
     def clear(self):
         with self.__timer as time:
@@ -125,8 +123,10 @@ class TTLCache(object):
         curr = root.next
         links = self.__links
         while curr is not root and curr.expire < time:
+            if self.evict_hook_func:
+                # Record the expiration before deleting it from the dictionary
+                self.evict_hook_func(curr.key, ObservationType.Expiration, {'expire_at': curr.expire})
             self.memory.delete(curr.key)
-            self.observers_orchestrator.observe(curr.key, ObservationType.Expiration, {'expire_at': curr.expire})
             del links[curr.key]
             next_link = curr.next
             curr.unlink()

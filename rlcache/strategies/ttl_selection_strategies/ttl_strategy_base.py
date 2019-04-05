@@ -1,17 +1,7 @@
-from abc import ABC
-from typing import Dict
-
-from rlcache.observers.observer import Observer
+from rlcache.strategies.BaseStrategy import BaseStrategy
 
 
-class TtlStrategy(ABC):
-    def __init__(self, config: Dict[str, any]):
-        self.config = config
-
+class TtlStrategy(BaseStrategy):
     def estimate_ttl(self, key: str) -> int:
         """Estimates a time to live based on the key."""
         raise NotImplementedError
-
-    def observer(self, shared_stats) -> Observer:
-        """Returns an observer implementation that can be called on various methods."""
-        pass

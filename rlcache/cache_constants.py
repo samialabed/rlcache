@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Callable
 
 
 class OperationType(Enum):
@@ -10,7 +11,7 @@ class OperationType(Enum):
 class CacheInformation(object):
     """Class for keeping track of the environment information across all strategies."""
 
-    def __init__(self, size_check_func):
+    def __init__(self, size_check_func: Callable[[], int]):
         self.invalidate = 0
         self.hit = 0
         self.miss = 0

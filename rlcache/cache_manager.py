@@ -1,7 +1,7 @@
 from typing import Dict
 
 from rlcache.backend import TTLCache
-from rlcache.backend.base import Storage
+from rlcache.backend.base import Storage, OutOfMemoryError
 from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observers.observer import ObserversOrchestrator, ObservationType
 from rlcache.strategies.caching_strategies import caching_strategy_from_config
@@ -9,20 +9,20 @@ from rlcache.strategies.eviction_strategies import eviction_strategy_from_config
 from rlcache.strategies.ttl_selection_strategies import ttl_strategy_from_config
 
 
+# TODO remove self.cache_stats
 class CacheManager(object):
-    def __init__(self, config: Dict[str, any], cache_config: Dict[str, any], backend: Storage):
-        self.caching_strategy = caching_strategy_from_config(config['caching_strategy_settings'])
-        self.eviction_strategy = eviction_strategy_from_config(config['eviction_strategy_settings'])
-        self.ttl_strategy = ttl_strategy_from_config(config['ttl_strategy_settings'])
+    def __init__(self, config: Dict[str, any], cache: TTLCache, backend: Storage):
         self.cache = cache
         self.backend = backend
         self.cache_stats = CacheInformation(size_check_func=cache.size)
-
+        self.caching_strategy = caching_strategy_from_config(config['caching_strategy_settings'], self.cache_stats)
+        self.eviction_strategy = eviction_strategy_from_config(config['eviction_strategy_settings'], self.cache_stats)
+        self.ttl_strategy = ttl_strategy_from_config(config['ttl_strategy_settings'], self.cache_stats)
         # memory to maintain decisions
-        # TODO FIXME get the observers from our strategies
-        self.observers = ObserversOrchestrator([strategy for strategy in
-                                                [self.caching_strategy, self.eviction_strategy, self.ttl_strategy]
-                                                if strategy.observer(self.cache_stats) is not None])
+        self.observers = ObserversOrchestrator(observers=[self.caching_strategy,
+                                                          self.eviction_strategy,
+                                                          self.ttl_strategy])
+        self.cache.register_hook_func(self.observers.observe)
 
     def get(self, key: str) -> Dict[str, any]:
         if self.cache.contains(key):
@@ -58,9 +58,10 @@ class CacheManager(object):
         return self.cache_stats
 
     def _set(self, key: str, values: Dict[str, any], operation_type: OperationType) -> None:
-        if self.caching_strategy.should_cache(key, values, operation_type):
-            ttl = self.ttl_strategy.estimate_ttl(key)
-            if self.cache.is_full():
+        ttl = self.ttl_strategy.estimate_ttl(key)
+        if self.caching_strategy.should_cache(key, values, ttl, operation_type):
+            try:
+                self.cache.set(key, values, ttl)
+            except OutOfMemoryError:
                 self.eviction_strategy.trim_cache(self.cache)
-            self.cache.set(key, values, ttl)
-        # else TODO let ttl_strategy attempt to learn anyway
+                self.cache.set(key, values, ttl)

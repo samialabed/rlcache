@@ -4,7 +4,7 @@ Reinforcement Learning Cache Manager
 
 
 # TODOs:
-
+Do I need shared object between all observers? I can just pass it when I need it as part of the context?
 
 ## Observer
 Should there be a global observer, but for each type of strategy have their own implementation?

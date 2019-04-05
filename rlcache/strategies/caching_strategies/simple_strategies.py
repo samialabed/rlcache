@@ -5,10 +5,10 @@ from rlcache.strategies.caching_strategies.caching_strategy_base import CachingS
 
 
 class OnReadWriteCacheStrategy(CachingStrategy):
-    def should_cache(self, key: str, values: Dict[str, str], cache_status: OperationType) -> bool:
+    def should_cache(self, key: str, values: Dict[str, str], ttl: int, cache_status: OperationType) -> bool:
         return True
 
 
 class OnReadOnlyCacheStrategy(CachingStrategy):
-    def should_cache(self, key: str, values: Dict[str, str], cache_status: OperationType) -> bool:
+    def should_cache(self, key: str, values: Dict[str, str], ttl: int, cache_status: OperationType) -> bool:
         return cache_status == OperationType.Miss

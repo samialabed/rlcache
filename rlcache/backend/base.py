@@ -8,20 +8,16 @@ TODO:
 
 
 class Storage(ABC):
-    def __init__(self, config: Dict[str, any]):
-        capacity = config['capacity']  # all should implement capacity
-        self.capacity = capacity
-
     def get(self, key: str, default=None) -> Dict[str, any]:
         raise NotImplementedError
 
-    def set(self, key: str, value) -> bool:
+    def set(self, key: str, value) -> None:
         raise NotImplementedError
 
-    def delete(self, key: str) -> bool:
+    def delete(self, key: str) -> None:
         raise NotImplementedError
 
-    def clear(self) -> bool:
+    def clear(self) -> None:
         raise NotImplementedError
 
     def size(self) -> int:
@@ -29,9 +25,6 @@ class Storage(ABC):
 
     def contains(self, key: str) -> bool:
         raise NotImplementedError
-
-    def is_full(self):
-        return self.size() >= self.capacity
 
 
 class OutOfMemoryError(Exception):

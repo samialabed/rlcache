@@ -1,14 +1,12 @@
 from abc import ABC
-from typing import Dict
 
 from rlcache.backend.base import Storage
 from rlcache.observers.observer import Observer
+from rlcache.strategies.BaseStrategy import BaseStrategy
 
 
-class EvictionStrategy(ABC):
+class EvictionStrategy(BaseStrategy, ABC):
     # TODO should this take a cache as well?
-    def __init__(self, config: Dict[str, any]):
-        self.config = config
 
     def trim_cache(self, cache: Storage):
         """ Called when cache is full, finds an item to evict from the cache and evict it."""
