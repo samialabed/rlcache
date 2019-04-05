@@ -8,6 +8,9 @@ TODO:
 
 
 class Storage(ABC):
+    def __init__(self, capacity: int):
+        self.capacity = capacity
+
     def get(self, key: str, default=None) -> Dict[str, any]:
         raise NotImplementedError
 

@@ -8,7 +8,7 @@ from rlgraph.spaces import FloatBox, IntBox
 
 from rlcache.backend import TTLCache, InMemoryStorage
 from rlcache.cache_constants import OperationType, CacheInformation
-from rlcache.observers.observer import ObservationType
+from rlcache.observer import ObservationType
 from rlcache.rl_model.converter import RLConverter
 from rlcache.strategies.caching_strategies.caching_strategy_base import CachingStrategy
 from rlcache.utils.vocabulary import Vocabulary

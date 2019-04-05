@@ -1,7 +1,7 @@
 from typing import Dict
 
 from rlcache.backend.inmemory import InMemoryStorage
-from rlcache.backend.inmemory_ttl import TTLCache
+from rlcache.backend.ttl_cache import TTLCache
 
 
 def storage_from_config(config: Dict[str, any]):

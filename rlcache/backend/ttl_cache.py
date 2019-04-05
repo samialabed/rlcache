@@ -4,7 +4,7 @@ from typing import Callable, Dict
 from time import monotonic
 
 from rlcache.backend.base import Storage
-from rlcache.observers.observer import ObservationType
+from rlcache.observer import ObservationType
 
 
 class ExpiredKeyError(KeyError):
@@ -58,7 +58,7 @@ class TTLCache(object):
         return True
 
     def size(self) -> int:
-        pass
+        return self.memory.size()
 
     def contains(self, key: str) -> bool:
         try:
@@ -142,6 +142,9 @@ class TTLCache(object):
             value = self.__links.pop(key)
             self.__links[key] = value
             return value
+
+    def capacity(self) -> int:
+        return self.memory.capacity
 
 
 class _Link(object):

@@ -1,8 +1,8 @@
 {
   "experiment_name": "RLCaching strategy only",
   "cache_backend_settings": {
-    "type": "inmemory",
-    "capacity": 5000
+    "type": "cache_inmemory",
+    "capacity": 50
   },
   "database_backend_settings": {
     "type": "inmemory",
@@ -13,7 +13,6 @@
     "caching_strategy_settings": {
       "type": "rl_driven",
       "num_fields": 10,
-      "max_capacity": 5000,
       "observer_storage_capacity": 100000,
       "agent_config": {
         "type": "dqn",

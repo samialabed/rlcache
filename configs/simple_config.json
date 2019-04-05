@@ -1,8 +1,8 @@
 {
   "experiment_name": "Fixed simple strategy",
   "cache_backend_settings": {
-    "type": "inmemory",
-    "capacity": 5000
+    "type": "cache_inmemory",
+    "capacity": 50
   },
   "database_backend_settings": {
     "type": "inmemory",

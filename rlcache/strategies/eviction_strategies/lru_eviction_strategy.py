@@ -3,7 +3,7 @@ from typing import Dict
 
 from rlcache.backend.base import Storage
 from rlcache.cache_constants import CacheInformation
-from rlcache.observers.observer import ObservationType
+from rlcache.observer import ObservationType
 from rlcache.strategies.eviction_strategies.eviction_strategy_base import EvictionStrategy
 
 
@@ -17,7 +17,8 @@ class LRUEvictionStrategy(EvictionStrategy):
             self.lru.pop(key)
         except KeyError:
             pass  # item not observed in cache
-        if not observation_type.Eviction:
+        # refresh lru if hit
+        if not observation_type == ObservationType.Expiration:
             self.lru[key] = observation_type
 
     def trim_cache(self, cache: Storage):

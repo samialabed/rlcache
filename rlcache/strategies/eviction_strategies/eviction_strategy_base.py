@@ -1,7 +1,7 @@
 from abc import ABC
 
 from rlcache.backend.base import Storage
-from rlcache.observers.observer import Observer
+from rlcache.observer import Observer
 from rlcache.strategies.BaseStrategy import BaseStrategy
 
 

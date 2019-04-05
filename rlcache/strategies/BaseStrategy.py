@@ -1,7 +1,7 @@
 from typing import Dict
 
 from rlcache.cache_constants import CacheInformation
-from rlcache.observers.observer import Observer, ObservationType
+from rlcache.observer import Observer, ObservationType
 
 
 class BaseStrategy(Observer):

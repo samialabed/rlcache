@@ -8,7 +8,6 @@ class ObservationType(Enum):
     Miss = 2
     Invalidate = 3
     Expiration = 4  # Signal terminal
-    Monitor = 5
 
 
 class Observer(ABC):
@@ -22,4 +21,4 @@ class ObserversOrchestrator(Observer):
 
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any] = None):
         for observer in self.observers:
-            observer.observe(key, observation_type, info)
+            observer.observe(key=key, observation_type=observation_type, info=info)
