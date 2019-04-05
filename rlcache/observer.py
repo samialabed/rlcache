@@ -8,6 +8,8 @@ class ObservationType(Enum):
     Miss = 2
     Invalidate = 3
     Expiration = 4  # Signal terminal
+    InvalidateNotInCache = 5
+    EvictionPolicy = 6
 
 
 class Observer(ABC):

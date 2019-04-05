@@ -69,16 +69,14 @@ class TTLCache(object):
             return not (link.expire < self.__timer())
 
     def get(self, key: str, default=None):
+        with self.__timer as time:
+            self.expire(time)  # cleanup the cache
         try:
-            link = self.__getlink(key)
-        except KeyError:
-            expired = False
-        else:
-            expired = link.expire < self.__timer()
-        if expired:
-            raise ExpiredKeyError(key)
-        else:
-            return self.memory.get(key, default)
+            # update access to the key
+            self.__getlink(key)
+        except Exception:
+            pass
+        return self.memory.get(key, default)
 
     def __iter__(self):
         root = self.__root
@@ -125,23 +123,18 @@ class TTLCache(object):
         while curr is not root and curr.expire < time:
             if self.evict_hook_func:
                 # Record the expiration before deleting it from the dictionary
-                self.evict_hook_func(curr.key, ObservationType.Expiration, {'expire_at': curr.expire})
+                self.evict_hook_func(curr.key, ObservationType.Expiration, {'expire_at': curr.expire,
+                                                                            'value': self.memory.get(curr.key)})
             self.memory.delete(curr.key)
             del links[curr.key]
             next_link = curr.next
             curr.unlink()
             curr = next_link
 
-    if hasattr(collections.OrderedDict, 'move_to_end'):
-        def __getlink(self, key):
-            value = self.__links[key]
-            self.__links.move_to_end(key)
-            return value
-    else:
-        def __getlink(self, key):
-            value = self.__links.pop(key)
-            self.__links[key] = value
-            return value
+    def __getlink(self, key):
+        value = self.__links[key]
+        self.__links.move_to_end(key)
+        return value
 
     def capacity(self) -> int:
         return self.memory.capacity

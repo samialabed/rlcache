@@ -42,27 +42,36 @@ class CacheManager(object):
             self.cache_stats.invalidate += 1
             self.cache.delete(key)  # ensure key isn't cached anymore
             status = OperationType.Update
+            self.observers.observe(key, ObservationType.Invalidate)
         else:
             status = OperationType.New
+            self.observers.observe(key, ObservationType.InvalidateNotInCache)
 
-        self.observers.observe(key, ObservationType.Invalidate)
         self._set(key, values, status)
 
     def delete(self, key: str) -> None:
         if self.cache.contains(key):
             self.cache_stats.invalidate += 1
             self.cache.delete(key)
-        self.observers.observe(key, ObservationType.Invalidate)
+            self.observers.observe(key, ObservationType.Invalidate)
+        else:
+            self.observers.observe(key, ObservationType.InvalidateNotInCache)
 
     def stats(self) -> str:
         return str(self.cache_stats)
 
     def _set(self, key: str, values: Dict[str, any], operation_type: OperationType) -> None:
         ttl = self.ttl_strategy.estimate_ttl(key)
-        if self.caching_strategy.should_cache(key, values, ttl, operation_type):
+        should_cache = self.caching_strategy.should_cache(key, values, ttl, operation_type)
+        if should_cache:
+            self.cache_stats.should_cache_true += 1
             try:
                 self.cache.set(key, values, ttl)
             except OutOfMemoryError:
-                self.eviction_strategy.trim_cache(self.cache)
+                evicted_key = self.eviction_strategy.trim_cache(self.cache)
+                self.observers.observe(evicted_key, ObservationType.EvictionPolicy)
                 self.cache_stats.manual_evicts += 1
                 self.cache.set(key, values, ttl)
+            self.eviction_strategy.monitor_key(key)
+        else:
+            self.cache_stats.should_cache_false += 1

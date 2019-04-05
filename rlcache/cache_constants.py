@@ -16,6 +16,8 @@ class CacheInformation(object):
         self.hit = 0
         self.miss = 0
         self.manual_evicts = 0
+        self.should_cache_true = 0
+        self.should_cache_false = 0
         self.max_capacity = max_capacity
         self._size_check_func = size_check_func
 
@@ -27,7 +29,13 @@ class CacheInformation(object):
         return "Invalidation: {}, " \
                "Hit: {}, " \
                "Miss: {}, " \
+               "Should Cache: {}/{}, " \
                "Manual Evicts: {}, " \
-               "Size: {}/{}".format(self.invalidate, self.hit, self.miss,
+               "Size: {}/{}".format(self.invalidate,
+                                    self.hit,
+                                    self.miss,
+                                    self.should_cache_true,
+                                    self.should_cache_false + self.should_cache_true,
                                     self.manual_evicts,
-                                    self.size, self.max_capacity)
+                                    self.size,
+                                    self.max_capacity)

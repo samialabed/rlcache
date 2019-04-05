@@ -15,6 +15,7 @@
       "num_fields": 10,
       "observer_storage_capacity": 100000,
       "agent_config": {
+        "name": "RLCachingStrategy",
         "type": "dqn",
         "memory_spec": {
           "type": "replay",

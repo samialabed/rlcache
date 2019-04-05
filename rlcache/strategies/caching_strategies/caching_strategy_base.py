@@ -5,5 +5,5 @@ from rlcache.strategies.BaseStrategy import BaseStrategy
 
 
 class CachingStrategy(BaseStrategy):
-    def should_cache(self, key: str, values: Dict[str, str], ttl: int, cache_status: OperationType) -> bool:
+    def should_cache(self, key: str, values: Dict[str, str], ttl: int, operation_type: OperationType) -> bool:
         raise NotImplementedError

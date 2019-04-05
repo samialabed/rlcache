@@ -33,3 +33,6 @@ class InMemoryStorage(Storage):
 
     def contains(self, key):
         return key in self.memory
+
+    def __repr__(self):
+        return self.memory.__repr__()
