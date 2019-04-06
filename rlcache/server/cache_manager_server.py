@@ -5,8 +5,9 @@ from flask import request, jsonify
 from rlcache.server import app, CONFIG, REQUESTS_COUNTER, CACHE_MANAGER, DATABASE_BACKEND
 
 # TODO Replace print with logger
-# TODO figure out difference between insert and update
 # TODO Distinguish between /close for load and /close for workload
+# TODO upon /close save results of /stats in a file
+# TODO add a /reset endpoint to signal an end of episode
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +64,13 @@ def update():
     REQUESTS_COUNTER[path] += 1
     req_data = request.get_json()
     key = req_data['key']
-    values = req_data['values']
+    values_to_update = req_data['values']
+    values = CACHE_MANAGER.get(key)
+    logger.debug("update: key: {}, values to update: {}, previous values: {}".format(key, values_to_update, values))
 
-    logger.debug("update: key: {}, values: {}".format(key, values))
+    for k, v in values_to_update.items():
+        values[k] = v
+
     CACHE_MANAGER.set(key, values)
     DATABASE_BACKEND.set(key, values)
 

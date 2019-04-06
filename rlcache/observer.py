@@ -10,10 +10,13 @@ class ObservationType(Enum):
     Expiration = 4  # Signal terminal
     InvalidateNotInCache = 5
     EvictionPolicy = 6
+    Read = 7  # Eviction strategy
+    Write = 8  # Eviction strategy
+    Delete = 9  # Eviction strategy
 
 
 class Observer(ABC):
-    def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
+    def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any] = None):
         raise NotImplementedError
 
 

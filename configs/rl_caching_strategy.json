@@ -21,6 +21,14 @@
           "type": "replay",
           "capacity": 128
         },
+        "network_spec": [
+          {
+            "type": "dense",
+            "units": 8,
+            "activation": "relu",
+            "scope": "hidden"
+          }
+        ],
         "preprocessing_spec": [],
         "optimizer_spec": {
           "type": "adam",
@@ -29,7 +37,7 @@
         "execution_spec": {
           "seed": 15,
           "gpu_spec": {
-            "gpus_enabled": true
+            "gpus_enabled": false
           }
         },
         "exploration_spec": {

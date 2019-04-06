@@ -12,10 +12,6 @@ class LRUEvictionStrategy(EvictionStrategy):
         super().__init__(config, shared_stats)
         self.lru = OrderedDict()
 
-    def monitor_key(self, key):
-        # TODO quick hack
-        self.lru[key] = 'add'
-
     def observe(self, key: str, observation_type: ObservationType, **kwargs):
         try:
             self.lru.pop(key)

@@ -17,14 +17,12 @@ from rlcache.utils.vocabulary import Vocabulary
 How to know a non-cached entry, that didn't get any more reads or write, is a good entry to not cache. 
 
     TODOs:
-        - shared_stats: extract information for should_cache from shared_stats
-        - Reward - calculate reward based on hits and misses for the key
-        - Pass more information to the state: cache_stats and capacity
+        - state representation: shared_stats: extract information for should_cache from shared_stats
         - [LP] Sunday: this should be refactored once second agent is developed and common functionality is taken out
-        - Debugging: states_per_key: key -> [hits, miss] and possibly used in should_cache
         - Result set is encoded as one id, Future work can use Language model to extract key information and decide
-        - based on that whether to cache or not.
-    initially - I don't need to pass the result set because YCSB generates rubbish, until I build my own workload
+        based on that whether to cache or not.
+    
+    * initially - I don't need to pass the result set because YCSB generates rubbish, until I build my own workload
     I can remove that.
 """
 
@@ -88,10 +86,9 @@ class RLCachingStrategy(CachingStrategy):
         # queues are used by apex worker to train the agent in different threads.
         # call to when experience is done self.agent.observe()
         """
-        if observation_type == ObservationType.InvalidateNotInCache:
-            if not self._incomplete_experience_storage.contains(key):
-                return  # never saw the key before probably batch insert nothing to learn
-
+        if not self._incomplete_experience_storage.contains(key):
+            return  # if I haven't had to make a decision on this, ignore it.
+        
         experience = self._incomplete_experience_storage.get(key)  # type: IncompleteExperienceEntry
         if observation_type == ObservationType.Hit:
             experience.hits += 1
