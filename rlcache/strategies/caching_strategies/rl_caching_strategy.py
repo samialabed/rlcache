@@ -100,7 +100,7 @@ class RLCachingStrategy(CachingStrategy):
             # TODO needs a serious refactoring this is ugly and hacky
             terminal = True
             self._incomplete_experience_storage.delete(key)
-            print("Terminal state")
+            self.logger.debug("Key: {} hit terminal state because: {}".format(key, str(observation_type)))
         next_state = experience.state.copy()  # type: np.ndarray
         next_state[2] = experience.hits
         next_state[3] = experience.miss
@@ -182,7 +182,7 @@ class CachingStrategyRLConverter(RLConverter):
             #     4- Shouldn't cache -> hit(s): complete experience, punish
             #   3- shouldn't cache -> no hits or miss: reward with 1
             reward = -miss if miss > 0 else 1
-        print("reward: {}".format(reward))
+        self.logger.debug("Hits: {}, Miss: {}, Reward: {}".format(experience.hits, experience.miss, reward))
         return reward
 
     def _extract_and_encode_values(self, values: Dict[str, any]) -> np.ndarray:

@@ -7,10 +7,6 @@ from rlcache.backend.base import Storage
 from rlcache.observer import ObservationType
 
 
-class ExpiredKeyError(KeyError):
-    pass
-
-
 class TTLCache(object):
     """
     LRU Cache implementation with per-item time-to-live (TTL) value.
@@ -62,12 +58,15 @@ class TTLCache(object):
         return self.memory.size()
 
     def contains(self, key: str) -> bool:
+        with self.__timer as time:
+            self.expire(time)  # cleanup the cache
         try:
             link = self.__links[key]  # no reordering
         except KeyError:
             return False
-        else:
-            return not (link.expire < self.__timer())
+        # else:
+        #     return not (link.expire < self.__timer())
+        return True
 
     def get(self, key: str, default=None):
         with self.__timer as time:

@@ -11,10 +11,7 @@ class InMemoryStorage(Storage):
         self.memory = {}
 
     def get(self, key, default=None):
-        cached_entry = self.memory.get(key)
-        if cached_entry:
-            return cached_entry
-        return default
+        return self.memory.get(key, default)
 
     def set(self, key, value):
         if key not in self.memory and len(self.memory) + 1 > self.capacity:

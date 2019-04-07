@@ -25,15 +25,13 @@ class CacheManager(object):
         if self.cache.contains(key):
             self.cache_stats.hit += 1
             self.caching_strategy.observe(key, ObservationType.Hit, {})
-            # self.observers.observe(key, ObservationType.Hit)
+            self.eviction_strategy.observe(key, ObservationType.Read)
             values = self.cache.get(key)
         else:
             self.cache_stats.miss += 1
             values = self.backend.get(key)
             self.caching_strategy.observe(key, ObservationType.Miss, {})
-            # self.observers.observe(key, ObservationType.Miss)
             self._set(key, values, OperationType.Miss)
-        self.eviction_strategy.observe(key, ObservationType.Read)
 
         return values
 
@@ -43,6 +41,7 @@ class CacheManager(object):
             self.cache.delete(key)  # ensure key isn't cached anymore
             status = OperationType.Update
             self.caching_strategy.observe(key, ObservationType.Invalidate, {})
+            self.eviction_strategy.observe(key, ObservationType.Invalidate)
         else:
             status = OperationType.New
             self.caching_strategy.observe(key, ObservationType.InvalidateNotInCache, {})
@@ -73,6 +72,7 @@ class CacheManager(object):
                 self.caching_strategy.observe(evicted_key, ObservationType.EvictionPolicy, {})
                 self.cache_stats.manual_evicts += 1
                 self.cache.set(key, values, ttl)
+            # TODO monitor leftover TTL to judge incomplete experience for the TTL
             self.eviction_strategy.observe(key, ObservationType.Write)
         else:
             self.cache_stats.should_cache_false += 1

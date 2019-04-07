@@ -1,16 +1,19 @@
 import logging
+import logging.config as log_cfg
 
 from flask import request, jsonify
 
 from rlcache.server import app, CONFIG, REQUESTS_COUNTER, CACHE_MANAGER, DATABASE_BACKEND
+from rlcache.utils.loggers import LOG_CONFIG
 
-# TODO Replace print with logger
-# TODO Distinguish between /close for load and /close for workload
-# TODO upon /close save results of /stats in a file
-# TODO add a /reset endpoint to signal an end of episode
+log_cfg.dictConfig(LOG_CONFIG)
 
 logger = logging.getLogger(__name__)
 
+
+# TODO Distinguish between /close for load and /close for workload
+# TODO upon /close save results of /stats in a file
+# TODO add a /reset endpoint to signal an end of episode
 
 @app.route('/')
 def hello_world():
@@ -71,8 +74,8 @@ def update():
     for k, v in values_to_update.items():
         values[k] = v
 
-    CACHE_MANAGER.set(key, values)
     DATABASE_BACKEND.set(key, values)
+    CACHE_MANAGER.set(key, values)
 
     return 'Success'
 
