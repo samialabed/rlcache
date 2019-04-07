@@ -37,7 +37,18 @@
         "execution_spec": {
           "seed": 15,
           "gpu_spec": {
-            "gpus_enabled": false
+            "gpus_enabled": true,
+            "max_usable_gpus": 1,
+            "allow_memory_growth": true
+          },
+          "disable_monitoring": true,
+          "session_config": {
+            "allow_soft_placement": true,
+            "device_count": {
+              "CPU": 1
+            },
+            "inter_op_parallelism_threads": 1,
+            "intra_op_parallelism_threads": 1
           }
         },
         "exploration_spec": {

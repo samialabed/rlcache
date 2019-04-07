@@ -25,10 +25,11 @@ class TTLCache(object):
         root.prev = root.next = root
         self.__links = collections.OrderedDict()
         self.__timer = _Timer(monotonic)
-        self.evict_hook_func = None
+        self.evict_hook_func = []
 
     def register_hook_func(self, hook: Callable[[str, ObservationType, Dict[str, any]], None]):
-        self.evict_hook_func = hook
+        """register hooks that are called upon evictions."""
+        self.evict_hook_func.append(hook)
 
     def clear(self):
         with self.__timer as time:
@@ -121,10 +122,11 @@ class TTLCache(object):
         curr = root.next
         links = self.__links
         while curr is not root and curr.expire < time:
-            if self.evict_hook_func:
-                # Record the expiration before deleting it from the dictionary
-                self.evict_hook_func(curr.key, ObservationType.Expiration, {'expire_at': curr.expire,
-                                                                            'value': self.memory.get(curr.key)})
+            if len(self.evict_hook_func) > 0:
+                for hook in self.evict_hook_func:
+                    # Record the expiration before deleting it from the dictionary
+                    hook(curr.key, ObservationType.Expiration, {'expire_at': curr.expire,
+                                                                'value': self.memory.get(curr.key)})
             self.memory.delete(curr.key)
             del links[curr.key]
             next_link = curr.next

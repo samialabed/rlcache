@@ -16,9 +16,9 @@ class LRUEvictionStrategy(EvictionStrategy):
         try:
             self.lru.pop(key)
         except KeyError:
-            return  # item not observed in cache
+            pass  # item not observed in cache
         # refresh lru if hit
-        if not observation_type == ObservationType.Expiration:
+        if observation_type in [ObservationType.Read, ObservationType.Write]:
             self.lru[key] = observation_type
 
     def trim_cache(self, cache: TTLCache):

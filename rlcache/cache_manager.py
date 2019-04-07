@@ -17,11 +17,9 @@ class CacheManager(object):
         self.caching_strategy = caching_strategy_from_config(config['caching_strategy_settings'], self.cache_stats)
         self.eviction_strategy = eviction_strategy_from_config(config['eviction_strategy_settings'], self.cache_stats)
         self.ttl_strategy = ttl_strategy_from_config(config['ttl_strategy_settings'], self.cache_stats)
-        # memory to maintain decisions
-        # self.observers = ObserversOrchestrator(observers=[self.caching_strategy,
-        #                                                   self.eviction_strategy,
-        #                                                   self.ttl_strategy])
+
         self.cache.register_hook_func(self.caching_strategy.observe)
+        self.cache.register_hook_func(self.eviction_strategy.observe)
 
     def get(self, key: str) -> Dict[str, any]:
         if self.cache.contains(key):
@@ -44,10 +42,10 @@ class CacheManager(object):
             self.cache_stats.invalidate += 1
             self.cache.delete(key)  # ensure key isn't cached anymore
             status = OperationType.Update
-            self.caching_strategy.observe(key, ObservationType.Invalidate)
+            self.caching_strategy.observe(key, ObservationType.Invalidate, {})
         else:
             status = OperationType.New
-            self.caching_strategy.observe(key, ObservationType.InvalidateNotInCache)
+            self.caching_strategy.observe(key, ObservationType.InvalidateNotInCache, {})
 
         self._set(key, values, status)
 
@@ -55,10 +53,10 @@ class CacheManager(object):
         if self.cache.contains(key):
             self.cache_stats.invalidate += 1
             self.cache.delete(key)
-            self.caching_strategy.observe(key, ObservationType.Invalidate)
+            self.caching_strategy.observe(key, ObservationType.Invalidate, {})
             self.eviction_strategy.observe(key, ObservationType.Delete)
         else:
-            self.caching_strategy.observe(key, ObservationType.InvalidateNotInCache)
+            self.caching_strategy.observe(key, ObservationType.InvalidateNotInCache, {})
 
     def stats(self) -> str:
         return str(self.cache_stats)
@@ -72,7 +70,7 @@ class CacheManager(object):
                 self.cache.set(key, values, ttl)
             except OutOfMemoryError:
                 evicted_key = self.eviction_strategy.trim_cache(self.cache)
-                self.caching_strategy.observe(evicted_key, ObservationType.EvictionPolicy)
+                self.caching_strategy.observe(evicted_key, ObservationType.EvictionPolicy, {})
                 self.cache_stats.manual_evicts += 1
                 self.cache.set(key, values, ttl)
             self.eviction_strategy.observe(key, ObservationType.Write)
