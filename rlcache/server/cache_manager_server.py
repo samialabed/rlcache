@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 # TODO Distinguish between /close for load and /close for workload
-# TODO upon /close save results of /stats in a file
 # TODO add a /reset endpoint to signal an end of episode
 
 @app.route('/')
@@ -93,6 +92,18 @@ def insert():
     CACHE_MANAGER.set(key, values)
     DATABASE_BACKEND.set(key, req_data['values'])
 
+    return 'Success'
+
+
+@app.route('/end_episode', methods=['GET'])
+def end_episode():
+    CACHE_MANAGER.end_episode()
+    return 'Success'
+
+
+@app.route('/save_results', methods=['GET'])
+def save_results():
+    CACHE_MANAGER.save_results()
     return 'Success'
 
 

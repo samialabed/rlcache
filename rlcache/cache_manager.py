@@ -4,20 +4,22 @@ from rlcache.backend import TTLCache
 from rlcache.backend.base import Storage, OutOfMemoryError
 from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observer import ObservationType
-from rlcache.strategies.caching_strategies import caching_strategy_from_config
-from rlcache.strategies.eviction_strategies import eviction_strategy_from_config
-from rlcache.strategies.ttl_selection_strategies import ttl_strategy_from_config
+from rlcache.strategies.strategies_from_config import strategies_from_config
+
+"""
+    TODOs:
+        - Add metric logging.
+        - [LP] Refactor the observer architecture. There are a lot of duplication there.
+"""
 
 
 class CacheManager(object):
+
     def __init__(self, config: Dict[str, any], cache: TTLCache, backend: Storage):
         self.cache = cache
         self.backend = backend
         self.cache_stats = CacheInformation(cache.capacity(), size_check_func=cache.size)
-        self.caching_strategy = caching_strategy_from_config(config['caching_strategy_settings'], self.cache_stats)
-        self.eviction_strategy = eviction_strategy_from_config(config['eviction_strategy_settings'], self.cache_stats)
-        self.ttl_strategy = ttl_strategy_from_config(config['ttl_strategy_settings'], self.cache_stats)
-
+        self.caching_strategy, self.eviction_strategy, self.ttl_strategy = strategies_from_config(config)
         self.cache.register_hook_func(self.caching_strategy.observe)
         self.cache.register_hook_func(self.eviction_strategy.observe)
 
@@ -76,3 +78,13 @@ class CacheManager(object):
             self.eviction_strategy.observe(key, ObservationType.Write)
         else:
             self.cache_stats.should_cache_false += 1
+
+    def end_episode(self):
+        self.caching_strategy.end_episode()
+        self.ttl_strategy.end_episode()
+        self.eviction_strategy.end_episode()
+
+    def save_results(self):
+        self.caching_strategy.save_results()
+        self.ttl_strategy.save_results()
+        self.eviction_strategy.save_results()

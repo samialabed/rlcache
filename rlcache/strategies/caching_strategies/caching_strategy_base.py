@@ -2,7 +2,7 @@ from abc import ABC
 from typing import Dict
 
 from rlcache.cache_constants import OperationType
-from rlcache.strategies.BaseStrategy import BaseStrategy
+from rlcache.strategies.base_strategy import BaseStrategy
 
 
 class CachingStrategy(BaseStrategy, ABC):

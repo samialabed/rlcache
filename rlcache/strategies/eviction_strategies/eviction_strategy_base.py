@@ -1,7 +1,7 @@
 from abc import ABC
 
 from rlcache.backend.base import Storage
-from rlcache.strategies.BaseStrategy import BaseStrategy
+from rlcache.strategies.base_strategy import BaseStrategy
 
 
 class EvictionStrategy(BaseStrategy, ABC):

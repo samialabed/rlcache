@@ -3,14 +3,19 @@ from collections import OrderedDict
 from typing import Dict
 
 from rlcache.backend import TTLCache
-from rlcache.cache_constants import CacheInformation
 from rlcache.observer import ObservationType
 from rlcache.strategies.eviction_strategies.eviction_strategy_base import EvictionStrategy
 
 
 class LRUEvictionStrategy(EvictionStrategy):
-    def __init__(self, config: Dict[str, any], shared_stats: CacheInformation):
-        super().__init__(config, shared_stats)
+    def end_episode(self):
+        pass
+
+    def save_results(self):
+        pass
+
+    def __init__(self, config: Dict[str, any], results_dir: str):
+        super().__init__(config, results_dir)
         self.lru = OrderedDict()
         self.logger = logging.getLogger(__name__)
         self.renewable_ops = {ObservationType.Read, ObservationType.Write}

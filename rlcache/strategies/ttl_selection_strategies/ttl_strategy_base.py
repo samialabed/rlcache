@@ -1,6 +1,6 @@
 from abc import ABC
 
-from rlcache.strategies.BaseStrategy import BaseStrategy
+from rlcache.strategies.base_strategy import BaseStrategy
 
 
 class TtlStrategy(BaseStrategy, ABC):
