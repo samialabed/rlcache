@@ -97,12 +97,14 @@ def insert():
 
 @app.route('/end_episode', methods=['GET'])
 def end_episode():
+    DATABASE_BACKEND.clear()
     CACHE_MANAGER.end_episode()
     return 'Success'
 
 
 @app.route('/save_results', methods=['GET'])
 def save_results():
+    # Should dump config file to results directory
     CACHE_MANAGER.save_results()
     return 'Success'
 

@@ -32,7 +32,7 @@ class TTLCache(object):
     def clear(self):
         with self.__timer as time:
             self.expire(time)
-            self.memory.clear()
+        self.memory.clear()
 
     def set(self, key: str, value, ttl: int = 500) -> bool:
         with self.__timer as time:
@@ -123,10 +123,11 @@ class TTLCache(object):
         links = self.__links
         while curr is not root and curr.expire < time:
             if len(self.evict_hook_func) > 0:
+                stored_values = self.memory.get(curr.key)
                 for hook in self.evict_hook_func:
                     # Record the expiration before deleting it from the dictionary
                     hook(curr.key, ObservationType.Expiration, {'expire_at': curr.expire,
-                                                                'value': self.memory.get(curr.key)})
+                                                                'value': stored_values})
             self.memory.delete(curr.key)
             del links[curr.key]
             next_link = curr.next

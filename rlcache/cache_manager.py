@@ -80,6 +80,7 @@ class CacheManager(object):
             self.cache_stats.should_cache_false += 1
 
     def end_episode(self):
+        self.cache.clear()
         self.caching_strategy.end_episode()
         self.ttl_strategy.end_episode()
         self.eviction_strategy.end_episode()

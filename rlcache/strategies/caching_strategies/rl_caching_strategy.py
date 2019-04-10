@@ -29,7 +29,7 @@ How to know a non-cached entry, that didn't get any more reads or write, is a go
 
 
 @dataclass
-class IncompleteExperienceEntry(object):
+class _IncompleteExperienceEntry(object):
     __slots__ = ['state', 'agent_action', 'ttl', 'hits', 'miss']
     state: np.ndarray
     agent_action: np.ndarray
@@ -75,12 +75,12 @@ class RLCachingStrategy(CachingStrategy):
                                      state_space=FloatBox(shape=(flattened_num_cols,)),
                                      action_space=IntBox(2, shape=(1,)))
         self._incomplete_experience_storage = TTLCache(InMemoryStorage(capacity=config['observer_storage_capacity']))
-        self._incomplete_experience_storage.register_hook_func(self.observe)
+        self._incomplete_experience_storage.register_hook_func(self._observe_expired_incomplete_experience)
 
         # evaluation specific variables
         self.episode_reward = 0  # type: int
         self.episode_stats = []  # type: List[str]
-        self.episode_num = 0
+        self.episode_num = 0  # type: int
 
     def should_cache(self, key: str, values: Dict[str, str], ttl: int, operation_type: OperationType) -> bool:
         # TODO what about the case of a cache key that exist already in the incomplete exp?
@@ -90,11 +90,11 @@ class RLCachingStrategy(CachingStrategy):
         # TODO Add ttl to state
         state = self.converter.system_to_agent_state(key, values, operation_type, {'hits': 0, 'miss': 0})
         agent_action = self.agent.get_action(state)
-        incomplete_experience_entry = IncompleteExperienceEntry(state=state,
-                                                                agent_action=agent_action,
-                                                                ttl=ttl,
-                                                                hits=0,
-                                                                miss=0)
+        incomplete_experience_entry = _IncompleteExperienceEntry(state=state,
+                                                                 agent_action=agent_action,
+                                                                 ttl=ttl,
+                                                                 hits=0,
+                                                                 miss=0)
         action = self.converter.agent_to_system_action(agent_action)
         self._incomplete_experience_storage.set(key,
                                                 incomplete_experience_entry,
@@ -104,15 +104,18 @@ class RLCachingStrategy(CachingStrategy):
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
         # TODO needs a serious refactoring this is ugly and hacky
         # TODO include stats/capacity information in the info dict
+        experience = self._incomplete_experience_storage.get(key)  # type: _IncompleteExperienceEntry
+        if experience is None:
+            return  # if I haven't had to make a decision on this, ignore it.
 
-        if observation_type == ObservationType.Expiration:
-            experience = info['value']
-        else:
-            if not self._incomplete_experience_storage.contains(key):
-                return  # if I haven't had to make a decision on this, ignore it.
+        self._reward_experience(key, experience, observation_type)
 
-            experience = self._incomplete_experience_storage.get(key)  # type: IncompleteExperienceEntry
+    def _observe_expired_incomplete_experience(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
+        assert observation_type == ObservationType.Expiration
+        experience = info['value']
+        self._reward_experience(key, experience, observation_type)
 
+    def _reward_experience(self, key: str, experience: _IncompleteExperienceEntry, observation_type: ObservationType):
         if observation_type == ObservationType.Hit:
             experience.hits += 1
             terminal = False
@@ -212,7 +215,7 @@ class CachingStrategyRLConverter(RLConverter):
     def agent_to_system_action(self, actions: np.ndarray, **kwargs) -> bool:
         return (actions.flatten() == 1).item()
 
-    def system_to_agent_reward(self, experience: IncompleteExperienceEntry) -> float:
+    def system_to_agent_reward(self, experience: _IncompleteExperienceEntry) -> float:
         hits = experience.hits
         miss = experience.miss
         should_cache = self.agent_to_system_action(experience.agent_action)

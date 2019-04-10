@@ -2,7 +2,7 @@
   "experiment_name": "rl_caching_strategy_only",
   "cache_backend_settings": {
     "type": "cache_inmemory",
-    "capacity": 50
+    "capacity": 500
   },
   "database_backend_settings": {
     "type": "inmemory",
@@ -10,7 +10,6 @@
   },
   "cache_manager_settings": {
     "experiment_name": "rl_caching_strategy_only",
-    "observer_ttl": 120,
     "caching_strategy_settings": {
       "type": "rl_driven",
       "num_fields": 10,
@@ -67,7 +66,7 @@
     },
     "ttl_strategy_settings": {
       "type": "fixed",
-      "ttl": 500
+      "ttl": 2
     },
     "eviction_strategy_settings": {
       "type": "lru"
