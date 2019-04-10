@@ -9,6 +9,8 @@ from rlcache.observer import ObservationType
 
 class TTLCache(object):
     """
+    Taken and modified from https://github.com/tkem/cachetools/blob/master/cachetools/ttl.py
+
     LRU Cache implementation with per-item time-to-live (TTL) value.
 
     TODO refactor a bit more to allow generalising for other type of backends.
@@ -61,11 +63,9 @@ class TTLCache(object):
         with self.__timer as time:
             self.expire(time)  # cleanup the cache
         try:
-            link = self.__links[key]  # no reordering
+            self.__links[key]  # no reordering
         except KeyError:
             return False
-        # else:
-        #     return not (link.expire < self.__timer())
         return True
 
     def get(self, key: str, default=None):
@@ -74,8 +74,9 @@ class TTLCache(object):
         try:
             # update access to the key
             self.__getlink(key)
-        except Exception:
-            pass
+        except KeyError:
+            # never saw the key before (or cleanedup)
+            return default
         return self.memory.get(key, default)
 
     def __iter__(self):

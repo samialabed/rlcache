@@ -11,6 +11,8 @@ dependencies:
  - graphviz
  - tensorflow-gpu
  - tensorflow-probability
+ - pandas
+ - hypothesis
  - pip:
    - sklearn
    - jupyter_tensorboard

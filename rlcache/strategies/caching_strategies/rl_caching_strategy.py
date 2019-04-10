@@ -3,9 +3,9 @@ from dataclasses import dataclass
 from typing import Dict, List
 
 import numpy as np
-from datetime import datetime
 from rlgraph.agents import Agent
 from rlgraph.spaces import FloatBox, IntBox
+from time import time
 
 from rlcache.backend import TTLCache, InMemoryStorage
 from rlcache.cache_constants import OperationType
@@ -19,8 +19,7 @@ from rlcache.utils.vocabulary import Vocabulary
 How to know a non-cached entry, that didn't get any more reads or write, is a good entry to not cache. 
 
     TODOs:
-        - state representation: shared_stats: extract information for should_cache from shared_stats
-        - [LP] Sunday: this should be refactored once second agent is developed and common functionality is taken out
+        - [LP] this should be refactored once second agent is developed and common functionality is taken out
         - Result set is encoded as one id, Future work can use Language model to extract key information and decide
         based on that whether to cache or not.
     
@@ -29,24 +28,34 @@ How to know a non-cached entry, that didn't get any more reads or write, is a go
 """
 
 
+@dataclass
 class IncompleteExperienceEntry(object):
-    def __init__(self, state: np.ndarray, agent_action: np.ndarray, ttl: int, hits: int, miss: int):
-        self.state = state
-        self.agent_action = agent_action
-        self.ttl = ttl
-        self.hits = hits
-        self.miss = miss
+    __slots__ = ['state', 'agent_action', 'ttl', 'hits', 'miss']
+    state: np.ndarray
+    agent_action: np.ndarray
+    ttl: int
+    hits: int
+    miss: int
 
     def __repr__(self):
-        return f'state: {self.state}, agent_action: {self.agent_action}, ttl: {self.ttl}, hits: {self.hits}, miss: {self.miss}'
+        return f'state: {self.state}, agent_action: {self.agent_action}, ' \
+            f'ttl: {self.ttl}, hits: {self.hits}, miss: {self.miss}'
 
 
 @dataclass
 class _MonitoringEntry(object):
+    __slots__ = ['timestamp', 'key', 'cache_hit', 'cache_miss']
     key: str
     cache_hit: bool
     cache_miss: bool
-    timestamp: datetime = datetime.now()
+    timestamp: time
+
+    def __repr__(self) -> str:
+        return f'timestamp: {self.timestamp}, key: {self.key}, ' \
+            f'cache_hit: {self.cache_hit}, cache_miss: {self.cache_miss}'
+
+    def __str__(self) -> str:
+        return f'{self.timestamp},{self.key},{self.cache_hit},{self.cache_miss}'
 
 
 class RLCachingStrategy(CachingStrategy):
@@ -69,9 +78,9 @@ class RLCachingStrategy(CachingStrategy):
         self._incomplete_experience_storage.register_hook_func(self.observe)
 
         # evaluation specific variables
-        self.episodes_rewards = []  # type: List[int]
-        self.episodes_loss = []  # type: List[List[int]]
-        self.episodes_stats = []  # type: List[List[_MonitoringEntry]]
+        self.episode_reward = 0  # type: int
+        self.episode_loss = []  # type: List[int]
+        self.episode_stats = []  # type: List[str]
         self.episode_num = 0
 
     def should_cache(self, key: str, values: Dict[str, str], ttl: int, operation_type: OperationType) -> bool:
@@ -79,6 +88,7 @@ class RLCachingStrategy(CachingStrategy):
         assert self._incomplete_experience_storage.get(key) is None, \
             "should_cache is assumed to be first call and key shouldn't be in the cache"
 
+        # TODO Add ttl to state
         state = self.converter.system_to_agent_state(key, values, operation_type, {'hits': 0, 'miss': 0})
         agent_action = self.agent.get_action(state)
         incomplete_experience_entry = IncompleteExperienceEntry(state=state,
@@ -95,20 +105,30 @@ class RLCachingStrategy(CachingStrategy):
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
         # TODO needs a serious refactoring this is ugly and hacky
         # TODO include stats/capacity information in the info dict
-        if not self._incomplete_experience_storage.contains(key):
-            return  # if I haven't had to make a decision on this, ignore it.
 
-        experience = self._incomplete_experience_storage.get(key)  # type: IncompleteExperienceEntry
+        if observation_type == ObservationType.Expiration:
+            experience = info['value']
+        else:
+            if not self._incomplete_experience_storage.contains(key):
+                return  # if I haven't had to make a decision on this, ignore it.
+
+            experience = self._incomplete_experience_storage.get(key)  # type: IncompleteExperienceEntry
+
         if observation_type == ObservationType.Hit:
             experience.hits += 1
             terminal = False
-            self.episodes_stats[self.episode_num].append(_MonitoringEntry(key=key, cache_hit=True, cache_miss=False))
+            self.episode_stats.append(str(_MonitoringEntry(key=key,
+                                                           cache_hit=True,
+                                                           cache_miss=False,
+                                                           timestamp=time())))
             self.logger.debug(f'Key hit: {key}')
         else:
             if observation_type == ObservationType.Miss:
                 experience.miss += 1
-                self.episodes_stats[self.episode_num].append(
-                    _MonitoringEntry(key=key, cache_hit=False, cache_miss=True))
+                self.episode_stats.append(str(_MonitoringEntry(key=key,
+                                                               cache_hit=False,
+                                                               cache_miss=True,
+                                                               timestamp=time())))
             self.logger.debug(f'Key: {key} is in terminal state because: {str(observation_type)}')
             terminal = True
         next_state = experience.state.copy()  # type: np.ndarray
@@ -121,43 +141,40 @@ class RLCachingStrategy(CachingStrategy):
                            reward,
                            next_state,
                            terminals=terminal)
-        self.episodes_rewards[self.episode_num] += reward
+        self.episode_reward += reward
         if terminal:
-            loss = self.agent.update()  # is this correct?
-            if loss is not None:
-                self.episodes_loss[self.episode_num].append(loss)
             # save?
             # time, key, hits, miss
             self._incomplete_experience_storage.delete(key)
 
     def end_episode(self):
-        self.logger.info(f'Finished episode {self.episode_num}. Reward: {self.episodes_rewards[self.episode_num]}.')
-        self.episodes_stats.append([])
-        self.episodes_loss.append([])
-        self.episodes_rewards.append(0)
-        self.episode_num += 1
+        self.logger.info(f'Finished episode {self.episode_num}. Reward: {self.episode_reward}.')
+        # TODO this is super hacky...
+        loss = self.agent.update()[1]
+        np.savetxt(f'{self.result_dir}/losses_episode_{self.episode_num}.txt',
+                   np.asarray([loss]),
+                   delimiter=',',
+                   header='loss')
+        np.savetxt(f'{self.result_dir}/stats_episode_{self.episode_num}.txt',
+                   np.asarray(self.episode_stats), delimiter=',',
+                   header=','.join(_MonitoringEntry.__slots__), fmt='%s')
 
-        self.agent.reset()
+        with open(f'{self.result_dir}/episode_rewards.txt', 'a') as f:
+            f.write(f'{self.episode_num},{self.episode_reward}')
+
+        # TODO save agent weights
+        self.episode_num += 1
+        self.reset()
+        # TODO add more debug information: agent action time, system wait time, evaluation time, episode duration.
+
+    def reset(self):
         self._incomplete_experience_storage.clear()
+        self.episode_reward = 0
+        self.agent.reset()
+        self.episode_stats.clear()
 
     def save_results(self):
-        # make this incremental?
-        np.savetxt(f'{self.result_dir}/episode_rewards.txt',
-                   np.asarray(self.episodes_rewards), delimiter=',')
-        np.savetxt(f'{self.result_dir}/losses.txt',
-                   np.asarray(self.episodes_loss), delimiter=',')
-        np.savetxt(f'{self.result_dir}/stats.txt',
-                   np.asarray(self.episodes_stats), delimiter=',')
-
-        # TODO add more debug information such as agent action time, evaluation time, episode time.
-        # np.savetxt(self.result_dir + '/timing/' + label + 'episode_durations.txt',
-        #            np.asarray(episode_times), delimiter=',')
-        # np.savetxt(self.result_dir + '/timing/' + label + 'system_waiting_times.txt',
-        #            np.asarray(system_waiting_times), delimiter=',')
-        # np.savetxt(self.result_dir + '/timing/' + label + 'agent_action_times.txt'
-        #            , np.asarray(agent_interaction_times), delimiter=',')
-        # np.savetxt(self.result_dir + '/timing/' + label + 'evaluation_times.txt',
-        #            np.asarray(evaluation_times), delimiter=',')
+        pass
 
 
 class CachingStrategyRLConverter(RLConverter):

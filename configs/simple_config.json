@@ -9,6 +9,7 @@
     "capacity": 1000000000
   },
   "cache_manager_settings": {
+    "experiment_name": "Fixed simple strategy",
     "caching_strategy_settings": {
       "type": "read_write"
     },

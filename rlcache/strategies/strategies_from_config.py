@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List
+from typing import Dict
 
 import time
 
@@ -17,7 +17,7 @@ from rlcache.strategies.ttl_selection_strategies.ttl_strategy_fixed import Fixed
 """
 
 
-def strategies_from_config(config: Dict[str, any]) -> List[CachingStrategy, EvictionStrategy, TtlStrategy]:
+def strategies_from_config(config: Dict[str, any]) -> [CachingStrategy, EvictionStrategy, TtlStrategy]:
     results_dir = f"results/{config['experiment_name']}/{time.strftime('%Y_%m_%d_%H_%M')}/"
 
     caching_strategy = caching_strategy_from_config(config['caching_strategy_settings'], results_dir)
