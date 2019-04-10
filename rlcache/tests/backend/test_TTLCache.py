@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 from time import sleep
 
-from rlcache.backend import TTLCache
+from rlcache.backend.ttl_cache import TTLCache
 
 
 class TestTTLCache(TestCase):

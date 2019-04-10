@@ -2,7 +2,7 @@ import logging
 from collections import OrderedDict
 from typing import Dict
 
-from rlcache.backend import TTLCache
+from rlcache.backend import TTLCacheV2
 from rlcache.observer import ObservationType
 from rlcache.strategies.eviction_strategies.eviction_strategy_base import EvictionStrategy
 
@@ -20,7 +20,7 @@ class LRUEvictionStrategy(EvictionStrategy):
         self.logger = logging.getLogger(__name__)
         self.renewable_ops = {ObservationType.Read, ObservationType.Write}
 
-    def observe(self, key: str, observation_type: ObservationType, **kwargs):
+    def observe(self, key: str, observation_type: ObservationType, *args, **kwargs):
         try:
             self.lru.pop(key)
         except KeyError:
@@ -33,7 +33,7 @@ class LRUEvictionStrategy(EvictionStrategy):
             self.logger.debug("Key {} expired, deleting".format(key))
             assert key not in self.lru, "Expired key should have been deleted."
 
-    def trim_cache(self, cache: TTLCache):
+    def trim_cache(self, cache: TTLCacheV2):
         eviction_key = self.lru.popitem(last=False)[0]
         assert cache.contains(eviction_key), "Key: {} is in LRU but not in cache.".format(eviction_key)
 

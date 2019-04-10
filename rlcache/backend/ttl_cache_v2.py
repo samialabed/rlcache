@@ -11,10 +11,10 @@ KeyType = str
 InfoType = Dict[str, any]
 
 
-@dataclass
+@dataclass(order=True)
 class _ExpirationListEntry(object):
     eviction_time: time
-    dirty_delete: bool
+    dirty_delete: bool = field(compare=False)
 
     key: str = field(compare=False)  # sort base only on eviction_time
 
@@ -91,3 +91,11 @@ class TTLCacheV2(object):
     def invoke_hooks(self, key, stored_values, eviction_time):
         for hook in self.evict_hook_func:
             hook(key, ObservationType.Expiration, {'value': stored_values, 'expire_at': eviction_time})
+
+    def capacity(self) -> int:
+        return self.memory.capacity
+
+    def clear(self):
+        self.key_to_expiration_item.clear()
+        self.expiration_time_list.clear()
+        self.memory.clear()

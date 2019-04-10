@@ -1,7 +1,7 @@
 from typing import Dict
 
-from rlcache.backend import TTLCache
 from rlcache.backend.base import Storage, OutOfMemoryError
+from rlcache.backend.ttl_cache_v2 import TTLCacheV2
 from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observer import ObservationType
 from rlcache.strategies.strategies_from_config import strategies_from_config
@@ -15,7 +15,7 @@ from rlcache.strategies.strategies_from_config import strategies_from_config
 
 class CacheManager(object):
 
-    def __init__(self, config: Dict[str, any], cache: TTLCache, backend: Storage):
+    def __init__(self, config: Dict[str, any], cache: TTLCacheV2, backend: Storage):
         self.cache = cache
         self.backend = backend
         self.cache_stats = CacheInformation(cache.capacity(), size_check_func=cache.size)

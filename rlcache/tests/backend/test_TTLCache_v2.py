@@ -9,6 +9,20 @@ from rlcache.backend.ttl_cache_v2 import TTLCacheV2
 
 class TestTTLCacheV2(TestCase):
 
+    def test_order_is_based_on_ttl(self):
+        key1 = 'key'
+        key2 = '000'
+        value = 'whatever'
+        storage = InMemoryStorage(10)
+        cache = TTLCacheV2(storage)
+
+        cache.set(key1, value, 10000000000)
+
+        cache.set(key2, value, 30)
+
+        assert cache.expiration_time_list[0]
+
+
     def test_get(self):
         key = 'key'
         value = '5'
