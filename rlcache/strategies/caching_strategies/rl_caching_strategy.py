@@ -79,7 +79,6 @@ class RLCachingStrategy(CachingStrategy):
 
         # evaluation specific variables
         self.episode_reward = 0  # type: int
-        self.episode_loss = []  # type: List[int]
         self.episode_stats = []  # type: List[str]
         self.episode_num = 0
 
@@ -152,7 +151,7 @@ class RLCachingStrategy(CachingStrategy):
         # TODO this is super hacky...
         loss = self.agent.update()[1]
         np.savetxt(f'{self.result_dir}/losses_episode_{self.episode_num}.txt',
-                   np.asarray([loss]),
+                   np.asarray(loss),
                    delimiter=',',
                    header='loss')
         np.savetxt(f'{self.result_dir}/stats_episode_{self.episode_num}.txt',
