@@ -8,12 +8,6 @@ from rlcache.strategies.eviction_strategies.eviction_strategy_base import Evicti
 
 
 class LRUEvictionStrategy(EvictionStrategy):
-    def end_episode(self, *args, **kwargs):
-        pass
-
-    def save_results(self):
-        pass
-
     def __init__(self, config: Dict[str, any], results_dir: str):
         super().__init__(config, results_dir)
         self.lru = OrderedDict()
@@ -39,3 +33,9 @@ class LRUEvictionStrategy(EvictionStrategy):
 
         cache.delete(eviction_key)
         return eviction_key
+
+    def end_episode(self, *args, **kwargs):
+        self.lru.clear()
+
+    def save_results(self):
+        pass
