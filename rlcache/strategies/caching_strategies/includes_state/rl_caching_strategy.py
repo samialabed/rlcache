@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import numpy as np
 from rlgraph.agents import Agent
@@ -8,7 +8,7 @@ from rlgraph.spaces import FloatBox, IntBox
 from time import time
 
 from rlcache.backend import TTLCacheV2, InMemoryStorage
-from rlcache.cache_constants import OperationType, CacheInformation
+from rlcache.cache_constants import OperationType
 from rlcache.observer import ObservationType
 from rlcache.rl_model.converter import RLConverter
 from rlcache.strategies.caching_strategies.caching_strategy_base import CachingStrategy
@@ -44,30 +44,30 @@ class _IncompleteExperienceEntry(object):
 
 @dataclass
 class _MonitoringEntry(object):
-    __slots__ = ['timestamp', 'key', 'cache_hit', 'cache_miss', 'episode']
+    __slots__ = ['timestamp', 'key', 'cache_hit', 'cache_miss']
     key: str
     cache_hit: bool
     cache_miss: bool
     timestamp: time
-    episode: int
 
     def __repr__(self) -> str:
         return f'timestamp: {self.timestamp}, key: {self.key}, ' \
-            f'cache_hit: {self.cache_hit}, cache_miss: {self.cache_miss}, episode: {self.episode}'
+            f'cache_hit: {self.cache_hit}, cache_miss: {self.cache_miss}'
 
     def __str__(self) -> str:
-        return f'{self.timestamp},{self.key},{self.cache_hit},{self.cache_miss},{self.episode}'
+        return f'{self.timestamp},{self.key},{self.cache_hit},{self.cache_miss}'
 
 
 class RLCachingStrategy(CachingStrategy):
 
     def __init__(self, config: Dict[str, any], results_dir):
         super().__init__(config, results_dir)
-        self.episode_rewards = []
+        num_indexes = config['num_fields']
         agent_config = config['agent_config']
         self.logger = logging.getLogger(__name__)
-        self.converter = CachingStrategyRLConverter(0)
-        flattened_num_cols = 1 + 1 + 1 + 1  # key +  cache_status + hits + miss
+        self.converter = CachingStrategyRLConverter(num_indexes)
+        flattened_num_cols = 1 + num_indexes + 1 + 1 + 1  # num_indexes + key +  cache_status + hits + miss
+
         # action space: should cache: true or false
         # state space: [capacity (1), query key(1), query result set(num_indexes)]
         # NOTE: state space and action_space are floatbox and intbox because bug in rlgraph.
@@ -81,7 +81,6 @@ class RLCachingStrategy(CachingStrategy):
         self.episode_reward = 0  # type: int
         self.episode_stats = []  # type: List[str]
         self.episode_num = 0  # type: int
-        self.losses = []  # type: List[Tuple[int, float]]
 
     def should_cache(self, key: str, values: Dict[str, str], ttl: int, operation_type: OperationType) -> bool:
         # TODO what about the case of a cache key that exist already in the incomplete exp?
@@ -119,11 +118,11 @@ class RLCachingStrategy(CachingStrategy):
     def _reward_experience(self, key: str, experience: _IncompleteExperienceEntry, observation_type: ObservationType):
         if observation_type == ObservationType.Hit:
             experience.hits += 1
+            terminal = False
             self.episode_stats.append(str(_MonitoringEntry(key=key,
                                                            cache_hit=True,
                                                            cache_miss=False,
-                                                           timestamp=time(),
-                                                           episode=self.episode_num)))
+                                                           timestamp=time())))
             self.logger.debug(f'Key hit: {key}')
         else:
             if observation_type == ObservationType.Miss:
@@ -131,11 +130,9 @@ class RLCachingStrategy(CachingStrategy):
                 self.episode_stats.append(str(_MonitoringEntry(key=key,
                                                                cache_hit=False,
                                                                cache_miss=True,
-                                                               timestamp=time(),
-                                                               episode=self.episode_num)))
+                                                               timestamp=time())))
             self.logger.debug(f'Key: {key} is in terminal state because: {str(observation_type)}')
-            self._incomplete_experience_storage.delete(key)
-
+            terminal = True
         next_state = experience.state.copy()  # type: np.ndarray
         next_state[2] = experience.hits
         next_state[3] = experience.miss
@@ -145,42 +142,41 @@ class RLCachingStrategy(CachingStrategy):
                            [],
                            reward,
                            next_state,
-                           terminals=False)
+                           terminals=terminal)
         self.episode_reward += reward
-        # TODO replace with update scheduler
-        loss = self.agent.update()[0]
-        if loss is not None:
-            self.losses.append((self.episode_num, loss))
+        if terminal:
+            # save?
+            # time, key, hits, miss
+            self._incomplete_experience_storage.delete(key)
 
-    def end_episode(self, cache_information: CacheInformation):
-        # Include final system configs
-        hits = cache_information.hit
-        miss = cache_information.miss
-
+    def end_episode(self):
         self.logger.info(f'Finished episode {self.episode_num}. Reward: {self.episode_reward}.')
-        end_episode_state = self.converter.system_to_agent_state('END', '', OperationType.EndEpisode, {'hits': hits,
-                                                                                                       'miss': miss})
-        final_reward = hits - miss
-        self.episode_reward += final_reward
-        self.agent.observe(
-            preprocessed_states=end_episode_state,
-            actions=self.converter.system_to_agent_action(False),
-            next_states=end_episode_state,
-            internals=[],
-            rewards=final_reward,
-            terminals=True
-        )
-        self.episode_rewards.append(self.episode_reward)
+        # TODO this is super hacky...
+        loss = self.agent.update()[1]
+        np.savetxt(f'{self.result_dir}/losses_episode_{self.episode_num}.txt',
+                   np.asarray(loss),
+                   delimiter=',',
+                   header='loss')
+        np.savetxt(f'{self.result_dir}/stats_episode_{self.episode_num}.txt',
+                   np.asarray(self.episode_stats), delimiter=',',
+                   header=','.join(_MonitoringEntry.__slots__), fmt='%s')
+
+        with open(f'{self.result_dir}/episode_rewards.txt', 'a') as f:
+            f.write(f'{self.episode_num},{self.episode_reward}')
+
         # TODO save agent weights
         self.episode_num += 1
+        self.reset()
+        # TODO add more debug information: agent action time, system wait time, evaluation time, episode duration.
+
+    def reset(self):
         self._incomplete_experience_storage.clear()
         self.episode_reward = 0
+        self.agent.reset()
+        self.episode_stats.clear()
 
     def save_results(self):
-        np.savetxt(f'{self.result_dir}/episode_rewards.txt', np.asarray(self.episode_rewards), delimiter=',')
-        np.savetxt(f'{self.result_dir}/losses.txt', np.asarray(self.losses, dtype='float32'), delimiter=',')
-        np.savetxt(f'{self.result_dir}/stats.txt', np.asarray(self.episode_stats), delimiter=',', fmt='%s')
-        # TODO add more debug information: agent action time, system wait time, evaluation time, episode duration.
+        pass
 
 
 class CachingStrategyRLConverter(RLConverter):
@@ -206,11 +202,12 @@ class CachingStrategyRLConverter(RLConverter):
     def system_to_agent_state(self, key, values, operation_type, info: Dict[str, any]) -> np.ndarray:
         # TODO get this from observer
         key_encoded = self.vocabulary.add_or_get_id(key)
+        values_encoded = self._extract_and_encode_values(values)
         operation_type_encoded = self.vocabulary.add_or_get_id(operation_type)
         hits = info.get('hits')
         miss = info.get('miss')
         # TODO get capacity
-        return np.concatenate([np.array([key_encoded, operation_type_encoded, hits, miss])])
+        return np.concatenate([np.array([key_encoded, operation_type_encoded, hits, miss]), values_encoded])
 
     def system_to_agent_action(self, should_cache: bool) -> np.ndarray:
         return np.ones(1, dtype='int32') if should_cache else np.zeros(1, dtype='int32')

@@ -10,6 +10,7 @@ class OperationType(Enum):
     New = 0
     Miss = 1
     Update = 2
+    EndEpisode = 3
 
 
 @dataclass

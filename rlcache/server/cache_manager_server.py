@@ -9,6 +9,7 @@ from rlcache.utils.loggers import LOG_CONFIG
 log_cfg.dictConfig(LOG_CONFIG)
 
 logger = logging.getLogger(__name__)
+skip_cache = True  # start with cache being skipped
 
 
 # TODO Distinguish between /close for load and /close for workload
@@ -81,6 +82,7 @@ def update():
 
 @app.route('/insert', methods=['POST'])
 def insert():
+    global skip_cache
     path = str(request.path)
     REQUESTS_COUNTER[path] += 1
 
@@ -89,7 +91,8 @@ def insert():
     values = req_data['values']
 
     logger.debug("insert: key: {}, values: {}".format(key, values))
-    CACHE_MANAGER.set(key, values)
+    if not skip_cache:  # exist for loading phase
+        CACHE_MANAGER.set(key, values)
     DATABASE_BACKEND.set(key, req_data['values'])
 
     return 'Success'
@@ -97,8 +100,15 @@ def insert():
 
 @app.route('/end_episode', methods=['GET'])
 def end_episode():
-    DATABASE_BACKEND.clear()
     CACHE_MANAGER.end_episode()
+    return 'Success'
+
+
+@app.route('/end_loading_phase', methods=['GET'])
+def end_loading_phase():
+    # TODO maybe make this a POST endpoint that can receive configs?
+    global skip_cache
+    skip_cache = True
     return 'Success'
 
 

@@ -8,7 +8,7 @@ from rlcache.strategies.eviction_strategies.eviction_strategy_base import Evicti
 
 
 class LRUEvictionStrategy(EvictionStrategy):
-    def end_episode(self):
+    def end_episode(self, *args, **kwargs):
         pass
 
     def save_results(self):

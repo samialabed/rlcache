@@ -15,11 +15,11 @@ from rlcache.strategies.strategies_from_config import strategies_from_config
 
 class CacheManager(object):
 
-    def __init__(self, config: Dict[str, any], cache: TTLCacheV2, backend: Storage):
+    def __init__(self, config: Dict[str, any], cache: TTLCacheV2, backend: Storage, results_dir: str):
         self.cache = cache
         self.backend = backend
         self.cache_stats = CacheInformation(cache.capacity(), size_check_func=cache.size)
-        self.caching_strategy, self.eviction_strategy, self.ttl_strategy = strategies_from_config(config)
+        self.caching_strategy, self.eviction_strategy, self.ttl_strategy = strategies_from_config(config, results_dir)
         self.cache.register_hook_func(self.caching_strategy.observe)
         self.cache.register_hook_func(self.eviction_strategy.observe)
 
@@ -80,10 +80,10 @@ class CacheManager(object):
             self.cache_stats.should_cache_false += 1
 
     def end_episode(self):
+        self.caching_strategy.end_episode(self.cache_stats)
+        self.ttl_strategy.end_episode(self.cache_stats)
+        self.eviction_strategy.end_episode(self.cache_stats)
         self.cache.clear()
-        self.caching_strategy.end_episode()
-        self.ttl_strategy.end_episode()
-        self.eviction_strategy.end_episode()
 
     def save_results(self):
         self.caching_strategy.save_results()

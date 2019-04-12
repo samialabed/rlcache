@@ -7,7 +7,7 @@ from rlcache.strategies.ttl_selection_strategies.ttl_strategy_base import TtlStr
 class FixedTtlStrategy(TtlStrategy):
     """Fixed strategy that returns a preconfigured ttl."""
 
-    def end_episode(self):
+    def end_episode(self, *args, **kwargs):
         pass
 
     def save_results(self):

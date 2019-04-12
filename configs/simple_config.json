@@ -2,7 +2,7 @@
   "experiment_name": "Fixed simple strategy",
   "cache_backend_settings": {
     "type": "cache_inmemory",
-    "capacity": 50
+    "capacity": 500
   },
   "database_backend_settings": {
     "type": "inmemory",
@@ -15,7 +15,7 @@
     },
     "ttl_strategy_settings": {
       "type": "fixed",
-      "ttl": 500
+      "ttl": 300
     },
     "eviction_strategy_settings": {
       "type": "lru"

@@ -8,7 +8,7 @@ from rlcache.strategies.caching_strategies.caching_strategy_base import CachingS
 # TODO add monitoring
 
 class OnReadWriteCacheStrategy(CachingStrategy):
-    def end_episode(self):
+    def end_episode(self, *args, **kwargs):
         pass
 
     def save_results(self):
@@ -22,7 +22,7 @@ class OnReadWriteCacheStrategy(CachingStrategy):
 
 
 class OnReadOnlyCacheStrategy(CachingStrategy):
-    def end_episode(self):
+    def end_episode(self, *args, **kwargs):
         pass
 
     def save_results(self):

@@ -9,7 +9,6 @@
     "capacity": 1000000000
   },
   "cache_manager_settings": {
-    "experiment_name": "rl_caching_strategy_only",
     "caching_strategy_settings": {
       "type": "rl_driven",
       "num_fields": 10,
@@ -19,12 +18,12 @@
         "type": "dqn",
         "memory_spec": {
           "type": "replay",
-          "capacity": 128
+          "capacity": 1000
         },
         "network_spec": [
           {
             "type": "dense",
-            "units": 8,
+            "units": 64,
             "activation": "relu",
             "scope": "hidden"
           }
@@ -32,24 +31,20 @@
         "preprocessing_spec": [],
         "optimizer_spec": {
           "type": "adam",
-          "learning_rate": 0.02
+          "learning_rate": 0.003
         },
         "execution_spec": {
-          "seed": 15,
           "gpu_spec": {
-            "gpus_enabled": true,
-            "max_usable_gpus": 1,
-            "allow_memory_growth": true
-          },
-          "disable_monitoring": true,
-          "session_config": {
-            "allow_soft_placement": true,
-            "device_count": {
-              "CPU": 1
-            },
-            "inter_op_parallelism_threads": 1,
-            "intra_op_parallelism_threads": 1
+            "gpus_enabled": false,
+            "max_usable_gpus": 0
           }
+        },
+        "update_spec": {
+          "do_updates": true,
+          "update_interval": 4,
+          "steps_before_update": 50000,
+          "batch_size": 512,
+          "sync_interval": 500000
         },
         "exploration_spec": {
           "epsilon_spec": {
@@ -58,7 +53,7 @@
               "from": 1.0,
               "to": 0.05,
               "start_timestep": 0,
-              "num_timesteps": 1500
+              "num_timesteps": 500000
             }
           }
         }
@@ -66,7 +61,7 @@
     },
     "ttl_strategy_settings": {
       "type": "fixed",
-      "ttl": 2
+      "ttl": 120
     },
     "eviction_strategy_settings": {
       "type": "lru"
