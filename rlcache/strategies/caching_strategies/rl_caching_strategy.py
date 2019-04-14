@@ -70,10 +70,9 @@ class RLCachingStrategy(CachingStrategy):
         flattened_num_cols = 1 + 1 + 1 + 1  # key +  cache_status + hits + miss
         # action space: should cache: true or false
         # state space: [capacity (1), query key(1), query result set(num_indexes)]
-        # NOTE: state space and action_space are floatbox and intbox because bug in rlgraph.
         self.agent = Agent.from_spec(agent_config,
                                      state_space=FloatBox(shape=(flattened_num_cols,)),
-                                     action_space=IntBox(2, shape=(1,)))
+                                     action_space=IntBox(2))
         self._incomplete_experience_storage = TTLCacheV2(InMemoryStorage(capacity=config['observer_storage_capacity']))
         self._incomplete_experience_storage.register_hook_func(self._observe_expired_incomplete_experience)
 
