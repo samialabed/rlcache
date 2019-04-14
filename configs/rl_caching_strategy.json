@@ -1,19 +1,19 @@
 {
-  "experiment_name": "rl_caching_strategy_only_with_counter",
+  "experiment_name": "rl_caching_strategy_only_no_episodes",
   "cache_backend_settings": {
     "type": "cache_inmemory",
     "capacity": 500
   },
   "database_backend_settings": {
-    "type": "inmemory",
-    "capacity": 1000000000
+    "type": "inmemory"
   },
   "cache_manager_settings": {
     "caching_strategy_settings": {
       "type": "rl_driven",
-      "num_fields": 10,
-      "episode_length":  100000,
-      "observer_storage_capacity": 1000000000,
+      "checkpoint_steps": 10000,
+      "state_configs": {
+        "value_field_length": 10
+      },
       "agent_config": {
         "name": "RLCachingStrategy",
         "type": "dqn",

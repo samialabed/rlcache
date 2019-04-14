@@ -1,5 +1,6 @@
 # TODO maybe make this a yml?
 
+
 LOG_CONFIG = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -10,7 +11,7 @@ LOG_CONFIG = {
     },
     'handlers': {
         'default': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'formatter': 'standard',
             'class': 'logging.StreamHandler',
             'stream': 'ext://sys.stdout',  # Default is stderr

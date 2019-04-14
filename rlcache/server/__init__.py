@@ -8,7 +8,6 @@ from flask import Flask
 from rlcache.backend import storage_from_config
 from rlcache.cache_manager import CacheManager
 
-# TODO this is ugly, but flask refactoring is pain and not worth the time.
 
 config_file = os.environ['CONFIG_FILE']
 with open(config_file, 'r') as fp:

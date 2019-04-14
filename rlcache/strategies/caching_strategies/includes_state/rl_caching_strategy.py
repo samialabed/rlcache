@@ -7,7 +7,7 @@ from rlgraph.agents import Agent
 from rlgraph.spaces import FloatBox, IntBox
 from time import time
 
-from rlcache.backend import TTLCacheV2, InMemoryStorage
+from rlcache.backend import TTLCache, InMemoryStorage
 from rlcache.cache_constants import OperationType
 from rlcache.observer import ObservationType
 from rlcache.rl_model.converter import RLConverter
@@ -74,7 +74,7 @@ class RLCachingStrategy(CachingStrategy):
         self.agent = Agent.from_spec(agent_config,
                                      state_space=FloatBox(shape=(flattened_num_cols,)),
                                      action_space=IntBox(2, shape=(1,)))
-        self._incomplete_experience_storage = TTLCacheV2(InMemoryStorage(capacity=config['observer_storage_capacity']))
+        self._incomplete_experience_storage = TTLCache(InMemoryStorage(capacity=config['observer_storage_capacity']))
         self._incomplete_experience_storage.register_hook_func(self._observe_expired_incomplete_experience)
 
         # evaluation specific variables

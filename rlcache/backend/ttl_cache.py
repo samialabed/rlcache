@@ -1,190 +1,99 @@
-import collections
-from typing import Callable, Dict
+import heapq
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List
 
-from time import monotonic
+import time
 
 from rlcache.backend.base import Storage
 from rlcache.observer import ObservationType
 
+KeyType = str
+InfoType = Dict[str, any]
+
+
+@dataclass(order=True)
+class _ExpirationListEntry(object):
+    eviction_time: time
+    dirty_delete: bool = field(compare=False)
+
+    key: str = field(compare=False)  # sort base only on eviction_time
+
+    def copy(self):
+        return _ExpirationListEntry(self.eviction_time, self.dirty_delete, self.key)
+
 
 class TTLCache(object):
     """
-    Taken and modified from https://github.com/tkem/cachetools/blob/master/cachetools/ttl.py
-
-    LRU Cache implementation with per-item time-to-live (TTL) value.
-
-    TODO refactor a bit more to allow generalising for other type of backends.
-    TODO [LP] refactor to use Python Magic.
+    Cache TTL wrapper on top of Storage objects that ensures objects are evicted after ttl is up.
     """
 
     def __init__(self, memory: Storage):
         self.memory = memory
-        self.__root = root = _Link()
-        root.prev = root.next = root
-        self.__links = collections.OrderedDict()
-        self.__timer = _Timer(monotonic)
+        self.expiration_time_list = []  # type: List[_ExpirationListEntry]
         self.evict_hook_func = []
+        self.key_to_expiration_item = {}  # type: Dict[str, _ExpirationListEntry]
 
-    def register_hook_func(self, hook: Callable[[str, ObservationType, Dict[str, any]], None]):
+    def register_hook_func(self, hook: Callable[[KeyType, ObservationType, InfoType], None]):
         """register hooks that are called upon evictions."""
         self.evict_hook_func.append(hook)
 
-    def clear(self):
-        with self.__timer as time:
-            self.expire(time)
-        self.memory.clear()
-
-    def set(self, key: str, value, ttl: int = 500) -> bool:
-        with self.__timer as time:
-            self.expire(time)
-            self.memory.set(key, value)
-        try:
-            link = self.__getlink(key)
-        except KeyError:
-            self.__links[key] = link = _Link(key)
-        else:
-            link.unlink()
-        link.expire = time + ttl
-        link.next = root = self.__root
-        link.prev = prev = root.prev
-        prev.next = root.prev = link
-        return True
-
-    def delete(self, key: str) -> bool:
+    def delete(self, key: str):
+        # do I want to raise key error if key not in cache?
         self.memory.delete(key)
-        link = self.__links.pop(key)
-        link.unlink()
-        return True
 
     def size(self) -> int:
         return self.memory.size()
 
-    def contains(self, key: str) -> bool:
-        with self.__timer as time:
-            self.expire(time)  # cleanup the cache
-        try:
-            self.__links[key]  # no reordering
-        except KeyError:
-            return False
-        return True
+    def contains(self, key: str):
+        self.expire(time.time())
+        return self.memory.contains(key)
 
     def get(self, key: str, default=None):
-        with self.__timer as time:
-            self.expire(time)  # cleanup the cache
-        try:
-            # update access to the key
-            self.__getlink(key)
-        except KeyError:
-            # never saw the key before (or cleanedup)
-            return default
+        self.expire(time.time())
         return self.memory.get(key, default)
 
-    def __iter__(self):
-        root = self.__root
-        curr = root.next
-        while curr is not root:
-            # "freeze" time for iterator access
-            with self.__timer as time:
-                if not (curr.expire < time):
-                    yield curr.key
-            curr = curr.next
+    def set(self, key: str, values: any, ttl: int) -> None:
+        """
+        :param key: key to set.
+        :param values: values.
+        :param ttl: time to live in seconds.
+        """
+        current_time = time.time()
+        self.expire(current_time)
+        self.memory.set(key, values)
+        if key in self.key_to_expiration_item:  # update pointer
+            stored_value = self.key_to_expiration_item[key]
+            stored_value.eviction_time = current_time + ttl
+            stored_value.dirty_delete = False
+        else:
+            expiration_entry = _ExpirationListEntry(eviction_time=current_time + ttl, key=key, dirty_delete=False)
+            self.key_to_expiration_item[key] = expiration_entry
+            heapq.heappush(self.expiration_time_list, expiration_entry)
 
-    def __len__(self):
-        root = self.__root
-        curr = root.next
-        time = self.__timer()
-        count = len(self.__links)
-        while curr is not root and curr.expire < time:
-            count -= 1
-            curr = curr.next
-        return count
+    def expire(self, cur_time):
+        for expiration_entry in self.expiration_time_list:
+            eviction_time = expiration_entry.eviction_time
+            key = expiration_entry.key
+            stored_value = self.key_to_expiration_item[key]
 
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        root = self.__root
-        root.prev = root.next = root
-        for link in sorted(self.__links.values(), key=lambda obj: obj.expire):
-            link.next = root
-            link.prev = prev = root.prev
-            prev.next = root.prev = link
-        self.expire(self.__timer())
+            if cur_time < eviction_time:
+                break
+            # self.delete(key) leaves the expiration queue as is, as a trade-off between speed and memory. cleanup here.
+            if not stored_value.dirty_delete and self.memory.contains(key):
+                stored_values = self.memory.get(key)
+                self.invoke_hooks(key, stored_values, eviction_time)
+                # remove entries from cache and expiration queue
+                self.memory.delete(key)
+            heapq.heappop(self.expiration_time_list)
 
-    def __repr__(self):
-        with self.__timer as time:
-            self.expire(time)
-            return self.memory.__repr__
-
-    def expire(self, time=None):
-        """Remove expired items from the cache."""
-        if time is None:
-            time = self.__timer()
-        root = self.__root
-        curr = root.next
-        links = self.__links
-        while curr is not root and curr.expire < time:
-            if len(self.evict_hook_func) > 0:
-                stored_values = self.memory.get(curr.key)
-                for hook in self.evict_hook_func:
-                    # Record the expiration before deleting it from the dictionary
-                    hook(curr.key, ObservationType.Expiration, {'expire_at': curr.expire,
-                                                                'value': stored_values})
-            self.memory.delete(curr.key)
-            del links[curr.key]
-            next_link = curr.next
-            curr.unlink()
-            curr = next_link
-
-    def __getlink(self, key):
-        value = self.__links[key]
-        self.__links.move_to_end(key)
-        return value
+    def invoke_hooks(self, key, stored_values, eviction_time):
+        for hook in self.evict_hook_func:
+            hook(key, ObservationType.Expiration, {'value': stored_values, 'expire_at': eviction_time})
 
     def capacity(self) -> int:
         return self.memory.capacity
 
-
-class _Link(object):
-    __slots__ = ('key', 'expire', 'next', 'prev')
-
-    def __init__(self, key=None, expire=None):
-        self.key = key
-        self.expire = expire
-
-    def __reduce__(self):
-        return _Link, (self.key, self.expire)
-
-    def unlink(self):
-        next_link = self.next
-        prev = self.prev
-        prev.next = next_link
-        next_link.prev = prev
-
-
-class _Timer(object):
-
-    def __init__(self, timer):
-        self.__timer = timer
-        self.__nesting = 0
-
-    def __call__(self):
-        if self.__nesting == 0:
-            return self.__timer()
-        else:
-            return self.__time
-
-    def __enter__(self):
-        if self.__nesting == 0:
-            self.__time = time = self.__timer()
-        else:
-            time = self.__time
-        self.__nesting += 1
-        return time
-
-    def __exit__(self, *exc):
-        self.__nesting -= 1
-
-    def __reduce__(self):
-        return _Timer, (self.__timer,)
-
-    def __getattr__(self, name):
-        return getattr(self.__timer, name)
+    def clear(self):
+        self.key_to_expiration_item.clear()
+        self.expiration_time_list.clear()
+        self.memory.clear()

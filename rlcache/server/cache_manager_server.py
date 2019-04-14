@@ -12,9 +12,6 @@ logger = logging.getLogger(__name__)
 skip_cache = True  # start with cache being skipped
 
 
-# TODO Distinguish between /close for load and /close for workload
-# TODO add a /reset endpoint to signal an end of episode
-
 @app.route('/')
 def hello_world():
     return 'Hello, World!'

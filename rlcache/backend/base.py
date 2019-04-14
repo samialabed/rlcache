@@ -1,15 +1,16 @@
 from abc import ABC
 from typing import Dict
 
-"""
-TODO:
-    - Write tests once things settled and you have a RL env
-"""
-
 
 class Storage(ABC):
     def __init__(self, capacity: int):
         self.capacity = capacity
+
+    def is_full(self) -> bool:
+        """ Determine if can put more items. If capacity isn't specified then assumed no space limit."""
+        if self.capacity is None:
+            return False
+        return self.size() + 1 > self.capacity
 
     def get(self, key: str, default=None) -> Dict[str, any]:
         raise NotImplementedError

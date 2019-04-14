@@ -1,31 +1,17 @@
 import logging
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Dict
 
 import numpy as np
 from rlgraph.agents import Agent
 from rlgraph.spaces import FloatBox, IntBox
-from time import time
 
-from rlcache.backend import TTLCacheV2, InMemoryStorage
+from rlcache.backend import TTLCache, InMemoryStorage
 from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observer import ObservationType
 from rlcache.rl_model.converter import RLConverter
 from rlcache.strategies.caching_strategies.caching_strategy_base import CachingStrategy
 from rlcache.utils.vocabulary import Vocabulary
-
-"""
-
-How to know a non-cached entry, that didn't get any more reads or write, is a good entry to not cache. 
-
-    TODOs:
-        - [LP] this should be refactored once second agent is developed and common functionality is taken out
-        - Result set is encoded as one id, Future work can use Language model to extract key information and decide
-        based on that whether to cache or not.
-    
-    * initially - I don't need to pass the result set because YCSB generates rubbish, until I build my own workload
-    I can remove that.
-"""
 
 
 @dataclass
@@ -42,49 +28,44 @@ class _IncompleteExperienceEntry(object):
             f'ttl: {self.ttl}, hits: {self.hits}, miss: {self.miss}'
 
 
-@dataclass
-class _MonitoringEntry(object):
-    __slots__ = ['timestamp', 'key', 'cache_hit', 'cache_miss', 'episode']
-    key: str
-    cache_hit: bool
-    cache_miss: bool
-    timestamp: time
-    episode: int
-
-    def __repr__(self) -> str:
-        return f'timestamp: {self.timestamp}, key: {self.key}, ' \
-            f'cache_hit: {self.cache_hit}, cache_miss: {self.cache_miss}, episode: {self.episode}'
-
-    def __str__(self) -> str:
-        return f'{self.timestamp},{self.key},{self.cache_hit},{self.cache_miss},{self.episode}'
-
-
 class RLCachingStrategy(CachingStrategy):
 
     def __init__(self, config: Dict[str, any], results_dir):
         super().__init__(config, results_dir)
-        self.episode_rewards = []
-        agent_config = config['agent_config']
+        # evaluation specific variables
+        self.observation_seen = 0
+        self.episode_reward = 0
+        self.checkpoint_steps = config['checkpoint_steps']
+
         self.logger = logging.getLogger(__name__)
+        self.reward_logger = self._create_file_logger('reward_logger')
+        self.loss_logger = self._create_file_logger('loss_logger')
+        self.stats_logger = self._create_file_logger('stats_logger')
+
+        agent_config = config['agent_config']
         self.converter = CachingStrategyRLConverter(0)
-        flattened_num_cols = 1 + 1 + 1 + 1  # key +  cache_status + hits + miss
         # action space: should cache: true or false
         # state space: [capacity (1), query key(1), query result set(num_indexes)]
+        fields_in_state = 1 + 1 + 1 + 1  # key +  cache_status + hits + miss
         self.agent = Agent.from_spec(agent_config,
-                                     state_space=FloatBox(shape=(flattened_num_cols,)),
+                                     state_space=FloatBox(shape=(fields_in_state,)),
                                      action_space=IntBox(2))
-        self._incomplete_experience_storage = TTLCacheV2(InMemoryStorage(capacity=config['observer_storage_capacity']))
-        self._incomplete_experience_storage.register_hook_func(self._observe_expired_incomplete_experience)
+        self._incomplete_experiences = TTLCache(InMemoryStorage())
+        self._incomplete_experiences.register_hook_func(self._observe_expired_incomplete_experience)
 
-        # evaluation specific variables
-        self.episode_reward = 0  # type: int
-        self.episode_stats = []  # type: List[str]
-        self.episode_num = 0  # type: int
-        self.losses = []  # type: List[Tuple[int, float]]
+    def _create_file_logger(self, name: str):
+        fmt = logging.Formatter('%(asctime)s,%(message)s')
+        handler = logging.FileHandler(f'{self.result_dir}/{name}.log')
+        handler.setFormatter(fmt)
+
+        logger = logging.getLogger(name)
+        logger.setLevel(logging.INFO)
+        logger.addHandler(handler)
+        return logger
 
     def should_cache(self, key: str, values: Dict[str, str], ttl: int, operation_type: OperationType) -> bool:
         # TODO what about the case of a cache key that exist already in the incomplete exp?
-        assert self._incomplete_experience_storage.get(key) is None, \
+        assert self._incomplete_experiences.get(key) is None, \
             "should_cache is assumed to be first call and key shouldn't be in the cache"
 
         # TODO Add ttl to state
@@ -96,49 +77,45 @@ class RLCachingStrategy(CachingStrategy):
                                                                  hits=0,
                                                                  miss=0)
         action = self.converter.agent_to_system_action(agent_action)
-        self._incomplete_experience_storage.set(key,
-                                                incomplete_experience_entry,
-                                                incomplete_experience_entry.ttl)
+        self._incomplete_experiences.set(key,
+                                         incomplete_experience_entry,
+                                         incomplete_experience_entry.ttl)
         return action
 
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
-        # TODO needs a serious refactoring this is ugly and hacky
         # TODO include stats/capacity information in the info dict
-        experience = self._incomplete_experience_storage.get(key)  # type: _IncompleteExperienceEntry
+        experience = self._incomplete_experiences.get(key)  # type: _IncompleteExperienceEntry
         if experience is None:
             return  # if I haven't had to make a decision on this, ignore it.
 
         self._reward_experience(key, experience, observation_type)
 
     def _observe_expired_incomplete_experience(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
+        """Observe decisions taken that hasn't been observed by main cache. e.g. don't cache -> ttl up -> no miss"""
         assert observation_type == ObservationType.Expiration
         experience = info['value']
         self._reward_experience(key, experience, observation_type)
 
     def _reward_experience(self, key: str, experience: _IncompleteExperienceEntry, observation_type: ObservationType):
+        cache_hit = False
+        cache_miss = False
         if observation_type == ObservationType.Hit:
-            experience.hits += 1
-            self.episode_stats.append(str(_MonitoringEntry(key=key,
-                                                           cache_hit=True,
-                                                           cache_miss=False,
-                                                           timestamp=time(),
-                                                           episode=self.episode_num)))
+            cache_hit = True
+            self.stats_logger.info(f'{key},{cache_hit},{cache_miss}')
             self.logger.debug(f'Key hit: {key}')
         else:
             if observation_type == ObservationType.Miss:
-                experience.miss += 1
-                self.episode_stats.append(str(_MonitoringEntry(key=key,
-                                                               cache_hit=False,
-                                                               cache_miss=True,
-                                                               timestamp=time(),
-                                                               episode=self.episode_num)))
+                cache_miss = True
+                self.stats_logger.info(f'{key},{cache_hit},{cache_miss}')
+                # experience.miss += 1
             self.logger.debug(f'Key: {key} is in terminal state because: {str(observation_type)}')
-            self._incomplete_experience_storage.delete(key)
+            self._incomplete_experiences.delete(key)
 
         next_state = experience.state.copy()  # type: np.ndarray
         next_state[2] = experience.hits
         next_state[3] = experience.miss
         reward = self.converter.system_to_agent_reward(experience)
+
         self.agent.observe(experience.state,
                            experience.agent_action,
                            [],
@@ -146,40 +123,23 @@ class RLCachingStrategy(CachingStrategy):
                            next_state,
                            terminals=False)
         self.episode_reward += reward
+
+        self.reward_logger.info(f'{reward}')
+
         # TODO replace with update scheduler
-        loss = self.agent.update()[0]
+        loss = self.agent.update()
         if loss is not None:
-            self.losses.append((self.episode_num, loss))
+            self.loss_logger.info(f'{loss[0]}')
 
+        if self.observation_seen % self.checkpoint_steps == 0:
+            self.logger.info(f'Observation seen so far: {self.observation_seen}, reward so far: {self.episode_reward}')
+
+    # deprecated
     def end_episode(self, cache_information: CacheInformation):
-        # Include final system configs
-        hits = cache_information.hit
-        miss = cache_information.miss
-
-        self.logger.info(f'Finished episode {self.episode_num}. Reward: {self.episode_reward}.')
-        end_episode_state = self.converter.system_to_agent_state('END', '', OperationType.EndEpisode, {'hits': hits,
-                                                                                                       'miss': miss})
-        final_reward = hits - miss
-        self.episode_reward += final_reward
-        self.agent.observe(
-            preprocessed_states=end_episode_state,
-            actions=self.converter.system_to_agent_action(False),
-            next_states=end_episode_state,
-            internals=[],
-            rewards=final_reward,
-            terminals=True
-        )
-        self.episode_rewards.append(self.episode_reward)
-        # TODO save agent weights
-        self.episode_num += 1
-        self._incomplete_experience_storage.clear()
-        self.episode_reward = 0
+        pass
 
     def save_results(self):
-        np.savetxt(f'{self.result_dir}/episode_rewards.txt', np.asarray(self.episode_rewards), delimiter=',')
-        np.savetxt(f'{self.result_dir}/losses.txt', np.asarray(self.losses, dtype='float32'), delimiter=',')
-        np.savetxt(f'{self.result_dir}/stats.txt', np.asarray(self.episode_stats), delimiter=',', fmt='%s')
-        # TODO add more debug information: agent action time, system wait time, evaluation time, episode duration.
+        pass
 
 
 class CachingStrategyRLConverter(RLConverter):
@@ -217,17 +177,17 @@ class CachingStrategyRLConverter(RLConverter):
     def agent_to_system_action(self, actions: np.ndarray, **kwargs) -> bool:
         return (actions.flatten() == 1).item()
 
-    def system_to_agent_reward(self, experience: _IncompleteExperienceEntry) -> float:
+    def system_to_agent_reward(self, experience: _IncompleteExperienceEntry) -> int:
         hits = experience.hits
         miss = experience.miss
         should_cache = self.agent_to_system_action(experience.agent_action)
         if should_cache:
             # 1- Should cache -> multiple hits -> expires/invalidates: Complete experience, reward
-            #     2- Should cache -> no hits -> expires/invalidates: complete experience, punish
+            # 2- Should cache -> no hits -> expires/invalidates: complete experience, punish
             reward = hits
         else:
-            #     4- Shouldn't cache -> hit(s): complete experience, punish
-            #   3- shouldn't cache -> no hits or miss: reward with 1
+            # 4- Shouldn't cache -> hit(s): complete experience, punish
+            # 3- shouldn't cache -> no hits or miss: reward with 1
             reward = -miss if miss > 0 else 1
         self.logger.debug("Hits: {}, Miss: {}, Reward: {}".format(experience.hits, experience.miss, reward))
         return reward

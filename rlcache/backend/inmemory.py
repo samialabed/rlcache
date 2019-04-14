@@ -1,12 +1,10 @@
 from rlcache.backend.base import Storage, OutOfMemoryError
 
 
-# TODO is this basically a dict?
-
 class InMemoryStorage(Storage):
     """Long lasting memory storage."""
 
-    def __init__(self, capacity: int):
+    def __init__(self, capacity: int = None):
         super().__init__(capacity)
         self.memory = {}
 
@@ -14,7 +12,8 @@ class InMemoryStorage(Storage):
         return self.memory.get(key, default)
 
     def set(self, key, value):
-        if key not in self.memory and len(self.memory) + 1 > self.capacity:
+        # key not in memory: update won't increase the size
+        if key not in self.memory and self.is_full():
             raise OutOfMemoryError
         self.memory[key] = value
 
