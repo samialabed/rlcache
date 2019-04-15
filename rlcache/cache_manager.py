@@ -5,25 +5,29 @@ from rlcache.backend.ttl_cache import TTLCache
 from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observer import ObservationType
 from rlcache.strategies.strategies_from_config import strategies_from_config
+from rlcache.utils.loggers import create_file_logger
 
 
 class CacheManager(object):
 
-    def __init__(self, config: Dict[str, any], cache: TTLCache, backend: Storage, results_dir: str):
+    def __init__(self, config: Dict[str, any], cache: TTLCache, backend: Storage, result_dir: str):
         self.cache = cache
         self.backend = backend
         self.cache_stats = CacheInformation(cache.capacity(), size_check_func=cache.size)
-        self.caching_strategy, self.eviction_strategy, self.ttl_strategy = strategies_from_config(config, results_dir)
+        self.caching_strategy, self.eviction_strategy, self.ttl_strategy = strategies_from_config(config, result_dir)
         self.cache.register_hook_func(self.caching_strategy.observe)
         self.cache.register_hook_func(self.eviction_strategy.observe)
+        self.cache_hit_logger = create_file_logger(result_dir=result_dir, name='cache_hit_logger')
 
     def get(self, key: str) -> Dict[str, any]:
         if self.cache.contains(key):
             self.cache_stats.hit += 1
+            self.cache_hit_logger.info(f'{key},{True},{False}')
             self.caching_strategy.observe(key, ObservationType.Hit, {})
             self.eviction_strategy.observe(key, ObservationType.Read)
             values = self.cache.get(key)
         else:
+            self.cache_hit_logger.info(f'{key},{False},{True}')
             self.cache_stats.miss += 1
             values = self.backend.get(key)
             self.caching_strategy.observe(key, ObservationType.Miss, {})
@@ -68,7 +72,6 @@ class CacheManager(object):
                 self.caching_strategy.observe(evicted_key, ObservationType.EvictionPolicy, {})
                 self.cache_stats.manual_evicts += 1
                 self.cache.set(key, values, ttl)
-            # TODO monitor leftover TTL to judge incomplete experience for the TTL
             self.eviction_strategy.observe(key, ObservationType.Write)
         else:
             self.cache_stats.should_cache_false += 1

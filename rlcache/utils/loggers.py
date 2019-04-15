@@ -1,3 +1,5 @@
+import logging
+
 # TODO maybe make this a yml?
 
 
@@ -20,13 +22,24 @@ LOG_CONFIG = {
     'loggers': {
         '': {  # root logger
             'handlers': ['default'],
-            'level': 'INFO',
+            'level': logging.WARN,
             'propagate': True
         },
         'tensorflow': {
             'handlers': ['default'],
-            'level': 'WARN',
+            'level': logging.WARN,
             'propagate': False
         }
     }
 }
+
+
+def create_file_logger(name: str, result_dir: str):
+    fmt = logging.Formatter('%(asctime)s,%(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    handler = logging.FileHandler(f'{result_dir}/{name}.log')
+    handler.setFormatter(fmt)
+
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    logger.addHandler(handler)
+    return logger

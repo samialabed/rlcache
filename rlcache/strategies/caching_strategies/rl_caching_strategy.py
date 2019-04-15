@@ -11,6 +11,7 @@ from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observer import ObservationType
 from rlcache.rl_model.converter import RLConverter
 from rlcache.strategies.caching_strategies.caching_strategy_base import CachingStrategy
+from rlcache.utils.loggers import create_file_logger
 from rlcache.utils.vocabulary import Vocabulary
 
 
@@ -30,17 +31,17 @@ class _IncompleteExperienceEntry(object):
 
 class RLCachingStrategy(CachingStrategy):
 
-    def __init__(self, config: Dict[str, any], results_dir):
-        super().__init__(config, results_dir)
+    def __init__(self, config: Dict[str, any], result_dir):
+        super().__init__(config, result_dir)
         # evaluation specific variables
         self.observation_seen = 0
         self.episode_reward = 0
         self.checkpoint_steps = config['checkpoint_steps']
 
         self.logger = logging.getLogger(__name__)
-        self.reward_logger = self._create_file_logger('reward_logger')
-        self.loss_logger = self._create_file_logger('loss_logger')
-        self.stats_logger = self._create_file_logger('stats_logger')
+        self.reward_logger = create_file_logger(name='reward_logger', result_dir=self.result_dir)
+        self.loss_logger = create_file_logger(name='loss_logger', result_dir=self.result_dir)
+        self.observation_logger = create_file_logger(name='observation_logger', result_dir=self.result_dir)
 
         agent_config = config['agent_config']
         self.converter = CachingStrategyRLConverter(0)
@@ -52,16 +53,6 @@ class RLCachingStrategy(CachingStrategy):
                                      action_space=IntBox(2))
         self._incomplete_experiences = TTLCache(InMemoryStorage())
         self._incomplete_experiences.register_hook_func(self._observe_expired_incomplete_experience)
-
-    def _create_file_logger(self, name: str):
-        fmt = logging.Formatter('%(asctime)s,%(message)s')
-        handler = logging.FileHandler(f'{self.result_dir}/{name}.log')
-        handler.setFormatter(fmt)
-
-        logger = logging.getLogger(name)
-        logger.setLevel(logging.INFO)
-        logger.addHandler(handler)
-        return logger
 
     def should_cache(self, key: str, values: Dict[str, str], ttl: int, operation_type: OperationType) -> bool:
         # TODO what about the case of a cache key that exist already in the incomplete exp?
@@ -83,6 +74,7 @@ class RLCachingStrategy(CachingStrategy):
         return action
 
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
+        self.observation_logger.info(f'{key},{observation_type.name}')
         # TODO include stats/capacity information in the info dict
         experience = self._incomplete_experiences.get(key)  # type: _IncompleteExperienceEntry
         if experience is None:
@@ -101,19 +93,17 @@ class RLCachingStrategy(CachingStrategy):
         cache_miss = False
         if observation_type == ObservationType.Hit:
             cache_hit = True
-            self.stats_logger.info(f'{key},{cache_hit},{cache_miss}')
             self.logger.debug(f'Key hit: {key}')
         else:
             if observation_type == ObservationType.Miss:
                 cache_miss = True
-                self.stats_logger.info(f'{key},{cache_hit},{cache_miss}')
                 # experience.miss += 1
             self.logger.debug(f'Key: {key} is in terminal state because: {str(observation_type)}')
             self._incomplete_experiences.delete(key)
 
         next_state = experience.state.copy()  # type: np.ndarray
-        next_state[2] = experience.hits
-        next_state[3] = experience.miss
+        next_state[2] = experience.hits + 1 if cache_hit else experience.hits
+        next_state[3] = experience.miss + 1 if cache_miss else experience.miss
         reward = self.converter.system_to_agent_reward(experience)
 
         self.agent.observe(experience.state,
@@ -130,7 +120,7 @@ class RLCachingStrategy(CachingStrategy):
         loss = self.agent.update()
         if loss is not None:
             self.loss_logger.info(f'{loss[0]}')
-
+        self.observation_seen += 1
         if self.observation_seen % self.checkpoint_steps == 0:
             self.logger.info(f'Observation seen so far: {self.observation_seen}, reward so far: {self.episode_reward}')
 
