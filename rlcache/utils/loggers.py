@@ -13,16 +13,22 @@ LOG_CONFIG = {
     },
     'handlers': {
         'default': {
-            'level': 'DEBUG',
+            'level': logging.DEBUG,
             'formatter': 'standard',
             'class': 'logging.StreamHandler',
             'stream': 'ext://sys.stdout',  # Default is stderr
         },
+        'errors_to_file': {
+            'level': logging.WARN,
+            'formatter': 'standard',
+            'class': 'logging.FileHandler',
+            'filename': 'errors.log'
+        }
     },
     'loggers': {
         '': {  # root logger
-            'handlers': ['default'],
-            'level': logging.WARN,
+            'handlers': ['default', 'errors_to_file'],
+            'level': logging.INFO,
             'propagate': True
         },
         'tensorflow': {

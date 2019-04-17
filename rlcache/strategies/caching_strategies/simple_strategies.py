@@ -11,12 +11,6 @@ class OnReadWriteCacheStrategy(CachingStrategy):
         super().__init__(config, result_dir)
         self.observation_logger = create_file_logger(name='observation_logger', result_dir=self.result_dir)
 
-    def end_episode(self, *args, **kwargs):
-        pass
-
-    def save_results(self):
-        pass
-
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
         self.observation_logger.info(f'{key},{observation_type.name}')
 
@@ -28,12 +22,6 @@ class OnReadOnlyCacheStrategy(CachingStrategy):
     def __init__(self, config: Dict[str, any], result_dir):
         super().__init__(config, result_dir)
         self.observation_logger = create_file_logger(name='observation_logger', result_dir=self.result_dir)
-
-    def end_episode(self, *args, **kwargs):
-        pass
-
-    def save_results(self):
-        pass
 
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
         self.observation_logger.info(f'{key},{observation_type.name}')

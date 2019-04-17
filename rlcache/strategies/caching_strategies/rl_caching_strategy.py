@@ -7,7 +7,7 @@ from rlgraph.agents import Agent
 from rlgraph.spaces import FloatBox, IntBox
 
 from rlcache.backend import TTLCache, InMemoryStorage
-from rlcache.cache_constants import OperationType, CacheInformation
+from rlcache.cache_constants import OperationType
 from rlcache.observer import ObservationType
 from rlcache.rl_model.converter import RLConverter
 from rlcache.strategies.caching_strategies.caching_strategy_base import CachingStrategy
@@ -123,13 +123,6 @@ class RLCachingStrategy(CachingStrategy):
         self.observation_seen += 1
         if self.observation_seen % self.checkpoint_steps == 0:
             self.logger.info(f'Observation seen so far: {self.observation_seen}, reward so far: {self.episode_reward}')
-
-    # deprecated
-    def end_episode(self, cache_information: CacheInformation):
-        pass
-
-    def save_results(self):
-        pass
 
 
 class CachingStrategyRLConverter(RLConverter):

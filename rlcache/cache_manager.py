@@ -17,6 +17,7 @@ class CacheManager(object):
         self.caching_strategy, self.eviction_strategy, self.ttl_strategy = strategies_from_config(config, result_dir)
         self.cache.register_hook_func(self.caching_strategy.observe)
         self.cache.register_hook_func(self.eviction_strategy.observe)
+        self.cache.register_hook_func(self.ttl_strategy.observe)
         self.cache_hit_logger = create_file_logger(result_dir=result_dir, name='cache_hit_logger')
 
     def get(self, key: str) -> Dict[str, any]:
@@ -25,6 +26,7 @@ class CacheManager(object):
             self.cache_hit_logger.info(f'{key},{True},{False}')
             self.caching_strategy.observe(key, ObservationType.Hit, {})
             self.eviction_strategy.observe(key, ObservationType.Read)
+            self.ttl_strategy.observe(key, ObservationType.Hit)
             values = self.cache.get(key)
         else:
             self.cache_hit_logger.info(f'{key},{False},{True}')
@@ -36,6 +38,7 @@ class CacheManager(object):
         return values
 
     def set(self, key: str, values: Dict[str, str]) -> None:
+        self.ttl_strategy.observe(key, ObservationType.Invalidate)
         if self.cache.contains(key):
             self.cache_stats.invalidate += 1
             self.cache.delete(key)  # ensure key isn't cached anymore
@@ -49,6 +52,7 @@ class CacheManager(object):
         self._set(key, values, status)
 
     def delete(self, key: str) -> None:
+        self.ttl_strategy.observe(key, ObservationType.Invalidate)
         if self.cache.contains(key):
             self.cache_stats.invalidate += 1
             self.cache.delete(key)
@@ -70,19 +74,10 @@ class CacheManager(object):
             except OutOfMemoryError:
                 evicted_key = self.eviction_strategy.trim_cache(self.cache)
                 self.caching_strategy.observe(evicted_key, ObservationType.EvictionPolicy, {})
+                self.ttl_strategy.observe(evicted_key, ObservationType.EvictionPolicy)
                 self.cache_stats.manual_evicts += 1
                 self.cache.set(key, values, ttl)
             self.eviction_strategy.observe(key, ObservationType.Write)
+            self.ttl_strategy.observe(key, ObservationType.Write)
         else:
             self.cache_stats.should_cache_false += 1
-
-    def end_episode(self):
-        self.caching_strategy.end_episode(self.cache_stats)
-        self.ttl_strategy.end_episode(self.cache_stats)
-        self.eviction_strategy.end_episode(self.cache_stats)
-        self.cache.clear()
-
-    def save_results(self):
-        self.caching_strategy.save_results()
-        self.ttl_strategy.save_results()
-        self.eviction_strategy.save_results()

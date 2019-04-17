@@ -33,9 +33,3 @@ class LRUEvictionStrategy(EvictionStrategy):
 
         cache.delete(eviction_key)
         return eviction_key
-
-    def end_episode(self, *args, **kwargs):
-        self.lru.clear()
-
-    def save_results(self):
-        pass

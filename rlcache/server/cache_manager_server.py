@@ -14,7 +14,7 @@ skip_cache = True  # start with cache being skipped
 
 @app.route('/')
 def hello_world():
-    return 'Hello, World!'
+    return 'Hello, World!, I am RLCache'
 
 
 @app.route('/delete', methods=['DELETE'])
@@ -95,24 +95,11 @@ def insert():
     return 'Success'
 
 
-@app.route('/end_episode', methods=['GET'])
-def end_episode():
-    CACHE_MANAGER.end_episode()
-    return 'Success'
-
-
 @app.route('/end_loading_phase', methods=['GET'])
 def end_loading_phase():
     # TODO maybe make this a POST endpoint that can receive configs?
     global skip_cache
     skip_cache = True
-    return 'Success'
-
-
-@app.route('/save_results', methods=['GET'])
-def save_results():
-    # Should dump config file to results directory
-    CACHE_MANAGER.save_results()
     return 'Success'
 
 
