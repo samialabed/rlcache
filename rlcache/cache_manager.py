@@ -65,7 +65,7 @@ class CacheManager(object):
         return str(self.cache_stats)
 
     def _set(self, key: str, values: Dict[str, any], operation_type: OperationType) -> None:
-        ttl = self.ttl_strategy.estimate_ttl(key)
+        ttl = self.ttl_strategy.estimate_ttl(key, values, operation_type)
         should_cache = self.caching_strategy.should_cache(key, values, ttl, operation_type)
         if should_cache:
             self.cache_stats.should_cache_true += 1

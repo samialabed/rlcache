@@ -38,5 +38,5 @@ class FixedTtlStrategy(TtlStrategy):
             if observation_type == ObservationType.Write:
                 self.observed_keys[key] = {'observation_time': current_time, 'estimated_ttl': self.ttl, 'hits': 0}
 
-    def estimate_ttl(self, key) -> int:
+    def estimate_ttl(self, key, *args, **kwargs) -> int:
         return self.ttl

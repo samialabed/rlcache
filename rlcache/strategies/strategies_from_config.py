@@ -8,6 +8,7 @@ from rlcache.strategies.eviction_strategies.eviction_strategy_base import Evicti
 from rlcache.strategies.eviction_strategies.lru_eviction_strategy import LRUEvictionStrategy
 from rlcache.strategies.ttl_selection_strategies.ttl_strategy_base import TtlStrategy
 from rlcache.strategies.ttl_selection_strategies.ttl_strategy_fixed import FixedTtlStrategy
+from rlcache.strategies.ttl_selection_strategies.ttl_strategy_rl import RLTtlStrategy
 
 
 def strategies_from_config(config: Dict[str, any], results_dir: str) -> [CachingStrategy,
@@ -58,5 +59,7 @@ def ttl_strategy_from_config(config: Dict[str, any], results_dir: str) -> TtlStr
     ttl_strategy_type = config['type']
     if ttl_strategy_type == "fixed":
         return FixedTtlStrategy(config, results_dir)
+    elif ttl_strategy_type == 'rl_driven':
+        return RLTtlStrategy(config, results_dir)
     else:
         raise NotImplementedError("Type passed isn't one of the supported types: {}".format(_supported_type))
