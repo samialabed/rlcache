@@ -5,7 +5,7 @@ from typing import Dict
 import numpy as np
 import time
 from rlgraph.agents import Agent
-from rlgraph.spaces import FloatBox
+from rlgraph.spaces import FloatBox, IntBox
 
 from rlcache.cache_constants import OperationType
 from rlcache.observer import ObservationType
@@ -17,10 +17,10 @@ from rlcache.utils.vocabulary import Vocabulary
 
 @dataclass
 class _ObservedExperience(object):
-    __slots__ = ['state', 'agent_action', 'ttl', 'hits', 'miss']
+    __slots__ = ['state', 'agent_action', 'estimated_ttl', 'hits', 'observation_time']
     state: np.ndarray
     agent_action: np.ndarray
-    estimated_ttl: float
+    estimated_ttl: int
     hits: int
     observation_time: time
 
@@ -48,7 +48,7 @@ class RLTtlStrategy(TtlStrategy):
         self.ttl_logger = create_file_logger(name='ttl_logger', result_dir=self.result_dir)
         self.agent = Agent.from_spec(agent_config,
                                      state_space=FloatBox(shape=(fields_in_state,)),
-                                     action_space=FloatBox(low=0, high=maximum_ttl))
+                                     action_space=IntBox(low=0, high=maximum_ttl))
 
         self.observed_keys = {}  # type: Dict[str, _ObservedExperience]
 
@@ -86,7 +86,8 @@ class RLTtlStrategy(TtlStrategy):
                                actions=observed_experience.agent_action,
                                internals=[],
                                rewards=reward,
-                               next_states=next_state)
+                               next_states=next_state,
+                               terminals=False)
             self.episode_reward += reward
             self.reward_logger.info(f'{reward}')
             del self.observed_keys[key]
@@ -99,17 +100,16 @@ class RLTtlStrategy(TtlStrategy):
                 self.logger.info(
                     f'Observation seen so far: {self.observation_seen}, reward so far: {self.episode_reward}')
 
+    def estimate_ttl(self, key: str, values: Dict[str, any], operation_type: OperationType) -> int:
+        observation_time = time.time()
+        state = self.converter.system_to_agent_state(key, values, operation_type, {})
+        agent_action = self.agent.get_action(state)
+        action = self.converter.agent_to_system_action(agent_action)
+        self.observed_keys[key] = _ObservedExperience(state=state, agent_action=agent_action, estimated_ttl=action,
+                                                      observation_time=observation_time,
+                                                      hits=0)
 
-def estimate_ttl(self, key: str, values: Dict[str, any], operation_type: OperationType) -> float:
-    observation_time = time.time()
-    state = self.converter.system_to_agent_state(key, values, operation_type, {})
-    agent_action = self.agent.get_action(state)
-    action = self.converter.agent_to_system_action(agent_action)
-    self.observed_keys[key] = _ObservedExperience(state=state, agent_action=agent_action, estimated_ttl=action,
-                                                  observation_time=observation_time,
-                                                  hits=0)
-
-    return action
+        return action
 
 
 class TTLStrategyConverter(RLConverter):
@@ -146,7 +146,7 @@ class TTLStrategyConverter(RLConverter):
     def system_to_agent_action(self, should_cache: bool) -> np.ndarray:
         return np.ones(1, dtype='int32') if should_cache else np.zeros(1, dtype='int32')
 
-    def agent_to_system_action(self, actions: np.ndarray, **kwargs) -> float:
+    def agent_to_system_action(self, actions: np.ndarray, **kwargs) -> int:
         return actions.flatten().item()
 
     def system_to_agent_reward(self, experience: _ObservedExperience, real_ttl: time) -> int:

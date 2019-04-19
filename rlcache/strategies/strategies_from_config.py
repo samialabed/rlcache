@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Dict
 
@@ -33,6 +34,13 @@ def caching_strategy_from_config(config: Dict[str, any], results_dir: str) -> Ca
     elif caching_strategy_type == "read_only":
         return OnReadOnlyCacheStrategy(config, results_dir)
     elif caching_strategy_type == 'rl_driven':
+        # load the agent config file into the dict
+        with open(config['agent_config'], 'r') as fp:
+            agent_config = json.load(fp)
+            config['agent_config'] = agent_config
+        # copy agent config to result directory for reproducibility
+        with open(f'{results_dir}/agent_config.json', 'w') as outfile:
+            json.dump(agent_config, outfile, indent=2)
         return RLCachingStrategy(config, results_dir)
     else:
         raise NotImplementedError("Type passed isn't one of the supported types: {}".format(_supported_type))
@@ -60,6 +68,13 @@ def ttl_strategy_from_config(config: Dict[str, any], results_dir: str) -> TtlStr
     if ttl_strategy_type == "fixed":
         return FixedTtlStrategy(config, results_dir)
     elif ttl_strategy_type == 'rl_driven':
+        # load the agent config file into the dict
+        with open(config['agent_config'], 'r') as fp:
+            agent_config = json.load(fp)
+            config['agent_config'] = agent_config
+        # copy agent config to result directory for reproducibility
+        with open(f'{results_dir}/agent_config.json', 'w') as outfile:
+            json.dump(agent_config, outfile, indent=2)
         return RLTtlStrategy(config, results_dir)
     else:
         raise NotImplementedError("Type passed isn't one of the supported types: {}".format(_supported_type))

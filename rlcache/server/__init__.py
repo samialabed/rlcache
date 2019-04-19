@@ -17,7 +17,7 @@ results_dir = f"results/{CONFIG['experiment_name']}/cache_capacity_{cache_capaci
 if not os.path.exists(results_dir):
     os.makedirs(results_dir)
 with open(f'{results_dir}/config_file.json', 'w') as outfile:
-    json.dump(CONFIG, outfile)
+    json.dump(CONFIG, outfile, indent=2)
 
 DATABASE_BACKEND = storage_from_config(CONFIG['database_backend_settings'])
 CACHE_BACKEND = storage_from_config(CONFIG['cache_backend_settings'])

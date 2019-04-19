@@ -1,0 +1,39 @@
+{
+  "name": "RLCachingStrategy",
+  "type": "dqn",
+  "memory_spec": {
+    "type": "prioritized_replay",
+    "capacity": 1000
+  },
+  "network_spec": [
+    {
+      "type": "dense",
+      "units": 64,
+      "activation": "relu",
+      "scope": "hidden"
+    }
+  ],
+  "preprocessing_spec": [],
+  "optimizer_spec": {
+    "type": "adam",
+    "learning_rate": 0.003
+  },
+  "update_spec": {
+    "do_updates": true,
+    "update_interval": 4,
+    "steps_before_update": 50000,
+    "batch_size": 512,
+    "sync_interval": 500000
+  },
+  "exploration_spec": {
+    "epsilon_spec": {
+      "decay_spec": {
+        "type": "linear_decay",
+        "from": 1.0,
+        "to": 0.05,
+        "start_timestep": 0,
+        "num_timesteps": 500000
+      }
+    }
+  }
+}

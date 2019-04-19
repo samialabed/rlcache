@@ -1,5 +1,5 @@
 {
-  "experiment_name": "rl_caching_strategy_only_no_episodes",
+  "experiment_name": "rl_all_strategy_only_no_episodes",
   "cache_backend_settings": {
     "type": "cache_inmemory",
     "capacity": 50000
@@ -17,8 +17,13 @@
       "agent_config": "configs/agents/caching_dqn.json"
     },
     "ttl_strategy_settings": {
-      "type": "fixed",
-      "ttl": 120
+      "type": "rl_driven",
+      "max_ttl": 300,
+      "checkpoint_steps": 10000,
+      "state_configs": {
+        "value_field_length": 10
+      },
+      "agent_config": "configs/agents/ttl_dqn.json"
     },
     "eviction_strategy_settings": {
       "type": "lru"
