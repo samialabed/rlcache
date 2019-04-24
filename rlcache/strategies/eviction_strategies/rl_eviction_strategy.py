@@ -40,6 +40,7 @@ class RLEvictionStrategy(EvictionStrategy):
         self.reward_logger = create_file_logger(name='reward_logger', result_dir=self.result_dir)
         self.loss_logger = create_file_logger(name='loss_logger', result_dir=self.result_dir)
         self.observation_logger = create_file_logger(name='observation_logger', result_dir=self.result_dir)
+        self.performance_logger = create_file_logger(name='performance_logger', result_dir=self.result_dir)
 
         agent_config = config['agent_config']
         # state_space = all keys in the cache
@@ -65,6 +66,7 @@ class RLEvictionStrategy(EvictionStrategy):
         if observation_type == ObservationType.Invalidate:
             # Set/Delete, remove entry from the cache.
             if self._incomplete_experiences.contains(key):
+                self.performance_logger.info('TrueEvict')
                 # reward an eviction followed by invalidation
                 stored_state = self._incomplete_experiences.get(key)  # type: _IncompleteExperienceEntry
                 reward = self.converter.system_to_agent_reward(observation_type)
@@ -85,6 +87,7 @@ class RLEvictionStrategy(EvictionStrategy):
         elif observation_type == ObservationType.Miss:
             # Miss after making an eviction decision
             if self._incomplete_experiences.contains(key):
+                self.performance_logger.info('FalseEvict')
                 # Punish, a read after an eviction decision
                 stored_state = self._incomplete_experiences.get(key)  # type: _IncompleteExperienceEntry
                 reward = self.converter.system_to_agent_reward(observation_type)
@@ -130,6 +133,7 @@ class RLEvictionStrategy(EvictionStrategy):
     def _observe_expired_incomplete_experience(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
         """Observe decisions taken that hasn't been observed by main cache. e.g. don't cache -> ttl up -> no miss"""
         assert observation_type == ObservationType.Expiration
+        self.performance_logger.info('TrueEvict')
         experience = info['value']  # type: _IncompleteExperienceEntry
         reward = self.converter.system_to_agent_reward(observation_type)
         state = experience.state
