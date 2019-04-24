@@ -47,15 +47,11 @@ def get():
     REQUESTS_COUNTER[path] += 1
     req_data = request.get_json()
     key = req_data['key']
+    results = CACHE_MANAGER.get(key)
 
-    try:
-        results = CACHE_MANAGER.get(key)
-
-        response = {'key': key, 'values': results}
-        logger.debug("get: {}".format(response))
-        return jsonify(response)
-    except Exception as e:
-        logger.error("Failed to get on: {}. message: {}".format(key, e))
+    response = {'key': key, 'values': results}
+    logger.debug("get: {}".format(response))
+    return jsonify(response)
 
 
 @app.route('/update', methods=['POST'])

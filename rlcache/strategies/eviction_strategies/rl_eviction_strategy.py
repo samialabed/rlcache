@@ -31,8 +31,6 @@ class _IncompleteExperienceEntry(object):
 class RLEvictionStrategy(EvictionStrategy):
     def __init__(self, config: Dict[str, any], results_dir: str):
         super().__init__(config, results_dir)
-        self.logger = logging.getLogger(__name__)
-
         # evaluation specific variables
         self.observation_seen = 0
         self.episode_reward = 0
@@ -51,12 +49,14 @@ class RLEvictionStrategy(EvictionStrategy):
 
         # Action: index of the key to evict
         self.agent = Agent.from_spec(agent_config,
-                                     state_space=FloatBox(low=-1, high=1e9,
+                                     state_space=FloatBox(low=0, high=1e9,
                                                           shape=(max_cache_size * fields_in_state,)),
                                      action_space=IntBox(low=0, high=max_cache_size, shape=(1,)))
 
         self._incomplete_experiences = TTLCache(InMemoryStorage())
         self._incomplete_experiences.register_hook_func(self._observe_expired_incomplete_experience)
+
+        # TODO consider making a dataclass for dictionary item instead of relying on numpy.
         self.view_of_the_cache = {}  # type: Dict[int, np.ndarray]
 
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
@@ -141,23 +141,26 @@ class RLEvictionStrategy(EvictionStrategy):
         state = self.converter.whole_cache_to_agent_state(self.view_of_the_cache)
         while True:
             agent_action = self.agent.get_action(state)
-            if agent_action.item() not in self.view_of_the_cache:
-                # punish and call it again
+            agent_action_in_sys = state.reshape(-1, 4)[agent_action.item()][0]  # key stored as first ele in state matrx
+
+            if agent_action_in_sys not in self.view_of_the_cache:
+                # agent predict an action that is either padding or not in the cache. punish and call it again
                 self.logger.debug(f'{__name__}: agent chose action not in cache: {agent_action}')
                 self._reward_agent(state, agent_action, -1)
 
             else:
-                eviction_key = self.converter.agent_to_system_action(agent_action)
-                self.logger.debug(f'{__name__}: agent chose id: {agent_action} -> key: {eviction_key}')
+                eviction_key = self.converter.agent_to_system_action(agent_action_in_sys)
+                self.logger.debug(f'{__name__}: agent chose id: {agent_action_in_sys} -> key: {eviction_key}')
                 break
-        stored_hits_miss = self.view_of_the_cache[agent_action.item()]
-        incomplete_experience = _IncompleteExperienceEntry(state, agent_action,
+        stored_hits_miss = self.view_of_the_cache[agent_action_in_sys]
+        incomplete_experience = _IncompleteExperienceEntry(state,
+                                                           agent_action,
                                                            hits=stored_hits_miss[1],
                                                            miss=stored_hits_miss[2],
                                                            ttl=stored_hits_miss[3])
         # TODO calculate the difference between ttl left and store that
         self._incomplete_experiences.set(eviction_key, incomplete_experience, incomplete_experience.ttl)
-        del self.view_of_the_cache[agent_action.item()]
+        del self.view_of_the_cache[agent_action_in_sys]
         assert cache.contains(eviction_key), "Key: {} is in Eviction Cache View but not in cache.".format(eviction_key)
         cache.delete(eviction_key)
         return eviction_key
@@ -192,7 +195,7 @@ class EvictionStrategyRLConverter(RLConverter):
     def system_to_agent_action(self, key: str) -> np.ndarray:
         return np.asarray(self.vocabulary.add_or_get_id(key))
 
-    def agent_to_system_action(self, actions: np.ndarray, **kwargs) -> str:
+    def agent_to_system_action(self, actions: int, **kwargs) -> str:
         return self.vocabulary.get_name_for_id(actions.item())
 
     def system_to_agent_reward(self, observation_type: ObservationType) -> int:
