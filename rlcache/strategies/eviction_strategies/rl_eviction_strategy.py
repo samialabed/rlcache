@@ -60,12 +60,10 @@ class RLEvictionStrategy(EvictionStrategy):
         self.view_of_the_cache = {}  # type: Dict[int, np.ndarray]
 
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
-        # If it is a miss/hit in the incomplete experience queue: punish (based on left TTL?)
-        # If it is an expiration: reward
-        # otherwise: a hit update the view of the cache wth hits, if a invalidate remove from view, if write put in
-
         observed_key = self.converter.vocabulary.add_or_get_id(key)
+
         if observation_type == ObservationType.Invalidate:
+            # Set/Delete, remove entry from the cache.
             if self._incomplete_experiences.contains(key):
                 # reward an eviction followed by invalidation
                 stored_state = self._incomplete_experiences.get(key)  # type: _IncompleteExperienceEntry
@@ -78,12 +76,14 @@ class RLEvictionStrategy(EvictionStrategy):
                 del self.view_of_the_cache[observed_key]
 
         elif observation_type == ObservationType.Expiration:
+            # Key expired, remove it from the view of the cache, it shouldn't be in our eviction decision.
             assert not self._incomplete_experiences.contains(key), \
                 "Detected key in incomplete experience. An expiration from cache means it key wasn't evicted."
             if observed_key in self.view_of_the_cache:
                 del self.view_of_the_cache[observed_key]
 
         elif observation_type == ObservationType.Miss:
+            # Miss after making an eviction decision
             if self._incomplete_experiences.contains(key):
                 # Punish, a read after an eviction decision
                 stored_state = self._incomplete_experiences.get(key)  # type: _IncompleteExperienceEntry
@@ -92,12 +92,14 @@ class RLEvictionStrategy(EvictionStrategy):
                 action = stored_state.agent_action
                 self._reward_agent(state, action, reward)
                 self._incomplete_experiences.delete(key)
-            assert observed_key in self.view_of_the_cache, \
-                "Attempt to read from cache but doesnt exist in the eviction strategy view"
+
+        elif observation_type == ObservationType.Hit:
+            # Cache hit, update the hit record of this key in the cache
             stored_view = self.view_of_the_cache[observed_key]
             stored_view[1] = stored_view[1] + 1  # increment hits
 
         elif observation_type == ObservationType.Write:
+            # New item to write into cache view and observe.
             assert self._incomplete_experiences.contains(key) is False, \
                 "Write observation should be precede with miss or hit."
             self.view_of_the_cache[observed_key] = self.converter.system_to_agent_state(key=observed_key,
@@ -194,6 +196,7 @@ class EvictionStrategyRLConverter(RLConverter):
         return self.vocabulary.get_name_for_id(actions.item())
 
     def system_to_agent_reward(self, observation_type: ObservationType) -> int:
+        # TODO consider scaling this based on difference in ttl?
         return -1 if observation_type == ObservationType.Miss else 1
 
     def _extract_and_encode_values(self, values: Dict[str, any]) -> np.ndarray:
