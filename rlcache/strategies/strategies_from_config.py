@@ -7,6 +7,7 @@ from rlcache.strategies.caching_strategies.rl_caching_strategy import RLCachingS
 from rlcache.strategies.caching_strategies.simple_strategies import OnReadWriteCacheStrategy, OnReadOnlyCacheStrategy
 from rlcache.strategies.eviction_strategies.eviction_strategy_base import EvictionStrategy
 from rlcache.strategies.eviction_strategies.lru_eviction_strategy import LRUEvictionStrategy
+from rlcache.strategies.eviction_strategies.rl_eviction_strategy import RLEvictionStrategy
 from rlcache.strategies.ttl_selection_strategies.ttl_strategy_base import TtlStrategy
 from rlcache.strategies.ttl_selection_strategies.ttl_strategy_fixed import FixedTtlStrategy
 from rlcache.strategies.ttl_selection_strategies.ttl_strategy_rl import RLTtlStrategy
@@ -47,7 +48,7 @@ def caching_strategy_from_config(config: Dict[str, any], results_dir: str) -> Ca
 
 
 def eviction_strategy_from_config(config: Dict[str, any], results_dir: str) -> EvictionStrategy:
-    _supported_type = ['lru']
+    _supported_type = ['lru', 'rl_driven']
 
     results_dir += '/eviction_strategy/'
     if not os.path.exists(results_dir):
@@ -55,6 +56,15 @@ def eviction_strategy_from_config(config: Dict[str, any], results_dir: str) -> E
     eviction_strategy_type = config['type']
     if eviction_strategy_type == "lru":
         return LRUEvictionStrategy(config, results_dir)
+    elif eviction_strategy_type == 'rl_driven':
+        # load the agent config file into the dict
+        with open(config['agent_config'], 'r') as fp:
+            agent_config = json.load(fp)
+            config['agent_config'] = agent_config
+        # copy agent config to result directory for reproducibility
+        with open(f'{results_dir}/agent_config.json', 'w') as outfile:
+            json.dump(agent_config, outfile, indent=2)
+        return RLEvictionStrategy(config, results_dir)
     else:
         raise NotImplementedError("Type passed isn't one of the supported types: {}".format(_supported_type))
 

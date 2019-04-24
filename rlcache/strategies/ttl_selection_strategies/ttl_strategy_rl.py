@@ -7,7 +7,7 @@ import time
 from rlgraph.agents import Agent
 from rlgraph.spaces import FloatBox, IntBox
 
-from rlcache.cache_constants import OperationType
+from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observer import ObservationType
 from rlcache.rl_model.converter import RLConverter
 from rlcache.strategies.ttl_selection_strategies.ttl_strategy_base import TtlStrategy
@@ -17,12 +17,13 @@ from rlcache.utils.vocabulary import Vocabulary
 
 @dataclass
 class _ObservedExperience(object):
-    __slots__ = ['state', 'agent_action', 'estimated_ttl', 'hits', 'observation_time']
+    __slots__ = ['state', 'agent_action', 'estimated_ttl', 'hits', 'observation_time', 'cache_utility']
     state: np.ndarray
     agent_action: np.ndarray
     estimated_ttl: int
     hits: int
     observation_time: time
+    cache_utility: int
 
 
 class RLTtlStrategy(TtlStrategy):
@@ -48,7 +49,7 @@ class RLTtlStrategy(TtlStrategy):
         self.ttl_logger = create_file_logger(name='ttl_logger', result_dir=self.result_dir)
         self.agent = Agent.from_spec(agent_config,
                                      state_space=FloatBox(shape=(fields_in_state,)),
-                                     action_space=IntBox(low=0, high=maximum_ttl))
+                                     action_space=IntBox(low=1, high=maximum_ttl))
 
         self.observed_keys = {}  # type: Dict[str, _ObservedExperience]
 
@@ -100,14 +101,21 @@ class RLTtlStrategy(TtlStrategy):
                 self.logger.info(
                     f'Observation seen so far: {self.observation_seen}, reward so far: {self.episode_reward}')
 
-    def estimate_ttl(self, key: str, values: Dict[str, any], operation_type: OperationType) -> int:
+    def estimate_ttl(self, key: str,
+                     values: Dict[str, any],
+                     operation_type: OperationType,
+                     cache_information: CacheInformation) -> int:
         observation_time = time.time()
         state = self.converter.system_to_agent_state(key, values, operation_type, {})
         agent_action = self.agent.get_action(state)
         action = self.converter.agent_to_system_action(agent_action)
-        self.observed_keys[key] = _ObservedExperience(state=state, agent_action=agent_action, estimated_ttl=action,
+        cache_utility = cache_information.size / cache_information.max_capacity
+        self.observed_keys[key] = _ObservedExperience(state=state,
+                                                      agent_action=agent_action,
+                                                      estimated_ttl=action,
                                                       observation_time=observation_time,
-                                                      hits=0)
+                                                      hits=0,
+                                                      cache_utility=cache_utility)
 
         return action
 
@@ -150,16 +158,12 @@ class TTLStrategyConverter(RLConverter):
         return actions.flatten().item()
 
     def system_to_agent_reward(self, experience: _ObservedExperience, real_ttl: time) -> int:
-        # TODO better reward function
-        hits = experience.hits
-        scaled_hits = hits / experience.estimated_ttl  # more hits means bigger ratio
+        # reward more utilisation of the cache capacity given more hits
 
         difference_in_ttl = real_ttl - experience.estimated_ttl
-        # if overshoot in estimation, difference is negative
-        # if exactly, it will be 0 (good)
-        # if less, it will be positive (meh?)
-        reward = difference_in_ttl + scaled_hits
-        self.logger.debug(f'{__name__}: Hits: {experience.hits}, Reward: {reward}')
+        # TODO consider doing (reward - difference in ttl) 
+        reward = experience.hits * (1 + experience.cache_utility)
+        self.logger.debug(f'{__name__}: Hits: {experience.hits}, ttl diff: {difference_in_ttl}, Reward: {reward}')
         return reward
 
     def _extract_and_encode_values(self, values: Dict[str, any]) -> np.ndarray:

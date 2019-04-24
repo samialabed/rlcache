@@ -26,7 +26,13 @@
       "agent_config": "configs/agents/ttl_dqn.json"
     },
     "eviction_strategy_settings": {
-      "type": "lru"
+      "type": "rl_driven",
+      "checkpoint_steps": 10000,
+      "state_configs": {
+        "value_field_length": 10
+      },
+      "cache_capacity": 50000,
+      "agent_config": "configs/agents/eviction_dqn.json"
     }
   }
 }

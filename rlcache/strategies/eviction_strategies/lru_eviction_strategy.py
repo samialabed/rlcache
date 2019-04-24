@@ -8,11 +8,11 @@ from rlcache.strategies.eviction_strategies.eviction_strategy_base import Evicti
 
 
 class LRUEvictionStrategy(EvictionStrategy):
-    def __init__(self, config: Dict[str, any], results_dir: str):
-        super().__init__(config, results_dir)
+    def __init__(self, config: Dict[str, any], result_dir: str):
+        super().__init__(config, result_dir)
         self.lru = OrderedDict()
         self.logger = logging.getLogger(__name__)
-        self.renewable_ops = {ObservationType.Read, ObservationType.Write}
+        self.renewable_ops = {ObservationType.Hit, ObservationType.Write}
 
     def observe(self, key: str, observation_type: ObservationType, *args, **kwargs):
         try:

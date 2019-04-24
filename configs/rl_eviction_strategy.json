@@ -1,0 +1,28 @@
+{
+  "experiment_name": "rl_eviction_strategy_only_no_episodes",
+  "cache_backend_settings": {
+    "type": "cache_inmemory",
+    "capacity": 500
+  },
+  "database_backend_settings": {
+    "type": "inmemory"
+  },
+  "cache_manager_settings": {
+    "caching_strategy_settings": {
+      "type": "read_write"
+    },
+    "ttl_strategy_settings": {
+      "type": "fixed",
+      "ttl": 120
+    },
+    "eviction_strategy_settings": {
+      "type": "rl_driven",
+      "checkpoint_steps": 10000,
+      "state_configs": {
+        "value_field_length": 10
+      },
+      "cache_capacity": 500,
+      "agent_config": "configs/agents/eviction_dqn.json"
+    }
+  }
+}

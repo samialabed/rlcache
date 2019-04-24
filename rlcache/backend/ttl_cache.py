@@ -38,7 +38,6 @@ class TTLCache(object):
         self.evict_hook_func.append(hook)
 
     def delete(self, key: str):
-        # do I want to raise key error if key not in cache?
         self.memory.delete(key)
 
     def size(self) -> int:
