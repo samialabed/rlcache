@@ -1,6 +1,6 @@
 import logging
 from collections import OrderedDict
-from typing import Dict
+from typing import Dict, List
 
 from rlcache.backend import TTLCache
 from rlcache.observer import ObservationType
@@ -27,9 +27,9 @@ class LRUEvictionStrategy(EvictionStrategy):
             self.logger.debug("Key {} expired, deleting".format(key))
             assert key not in self.lru, "Expired key should have been deleted."
 
-    def trim_cache(self, cache: TTLCache):
+    def trim_cache(self, cache: TTLCache) -> List[str]:
         eviction_key = self.lru.popitem(last=False)[0]
         assert cache.contains(eviction_key), "Key: {} is in LRU but not in cache.".format(eviction_key)
 
         cache.delete(eviction_key)
-        return eviction_key
+        return [eviction_key]

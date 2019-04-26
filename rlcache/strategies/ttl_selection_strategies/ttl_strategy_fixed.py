@@ -13,7 +13,7 @@ class FixedTtlStrategy(TtlStrategy):
     def __init__(self, config: Dict[str, any], result_dir: str):
         super().__init__(config, result_dir)
         self.ttl = self.config['ttl']
-        self.ttl_logger = create_file_logger(name='ttl_logger', result_dir=self.result_dir)
+        self.ttl_logger = create_file_logger(name=f'{__name__}_ttl_logger', result_dir=self.result_dir)
         self.observed_keys = {}
 
     def observe(self, key: str, observation_type: ObservationType, *args, **kwargs):

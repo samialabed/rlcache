@@ -18,7 +18,7 @@ class CacheManager(object):
         self.cache.register_hook_func(self.caching_strategy.observe)
         self.cache.register_hook_func(self.eviction_strategy.observe)
         self.cache.register_hook_func(self.ttl_strategy.observe)
-        self.cache_hit_logger = create_file_logger(result_dir=result_dir, name='cache_hit_logger')
+        self.cache_hit_logger = create_file_logger(result_dir=result_dir, name=f'{__name__}_cache_hit_logger')
 
     def get(self, key: str) -> Dict[str, any]:
         if self.cache.contains(key):
@@ -73,12 +73,15 @@ class CacheManager(object):
             try:
                 self.cache.set(key, values, ttl)
             except OutOfMemoryError:
-                evicted_key = self.eviction_strategy.trim_cache(self.cache)
-                self.caching_strategy.observe(evicted_key, ObservationType.EvictionPolicy,
+                evicted_keys = self.eviction_strategy.trim_cache(self.cache)
+                for evicted_key in evicted_keys:
+                    self.caching_strategy.observe(evicted_key, ObservationType.EvictionPolicy,
+                                                  {'cache_stats': self.cache_stats})
+                    self.ttl_strategy.observe(evicted_key, ObservationType.EvictionPolicy,
                                               {'cache_stats': self.cache_stats})
-                self.ttl_strategy.observe(evicted_key, ObservationType.EvictionPolicy,
-                                          {'cache_stats': self.cache_stats})
-                self.cache_stats.manual_evicts += 1
+                    self.cache_stats.manual_evicts += 1
+
+                # TODO this should be in a loop
                 self.cache.set(key, values, ttl)
 
             self.eviction_strategy.observe(key, ObservationType.Write, {'cache_stats': self.cache_stats,

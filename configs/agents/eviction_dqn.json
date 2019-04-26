@@ -1,8 +1,8 @@
 {
-  "name": "RLTtlStrategy",
+  "name": "eviction_dqn_network",
   "type": "dqn",
   "memory_spec": {
-    "type": "replay",
+    "type": "prioritized_replay",
     "capacity": 1000
   },
   "network_spec": [
@@ -21,9 +21,9 @@
   "update_spec": {
     "do_updates": true,
     "update_interval": 4,
-    "steps_before_update": 50000,
+    "steps_before_update": 500,
     "batch_size": 512,
-    "sync_interval": 500000
+    "sync_interval": 500
   },
   "exploration_spec": {
     "epsilon_spec": {
@@ -32,7 +32,7 @@
         "from": 1.0,
         "to": 0.05,
         "start_timestep": 0,
-        "num_timesteps": 500000
+        "num_timesteps": 500
       }
     }
   }

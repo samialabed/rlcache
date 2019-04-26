@@ -1,5 +1,5 @@
 {
-  "name": "RLTtlStrategy",
+  "name": "ttl_dqn_network",
   "type": "dqn",
   "memory_spec": {
     "type": "prioritized_replay",

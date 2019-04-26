@@ -39,9 +39,9 @@ class RLCachingStrategy(CachingStrategy):
         self.checkpoint_steps = config['checkpoint_steps']
 
         self.logger = logging.getLogger(__name__)
-        self.reward_logger = create_file_logger(name='reward_logger', result_dir=self.result_dir)
-        self.loss_logger = create_file_logger(name='loss_logger', result_dir=self.result_dir)
-        self.observation_logger = create_file_logger(name='observation_logger', result_dir=self.result_dir)
+        self.reward_logger = create_file_logger(name=f'{__name__}_reward_logger', result_dir=self.result_dir)
+        self.loss_logger = create_file_logger(name=f'{__name__}_loss_logger', result_dir=self.result_dir)
+        self.observation_logger = create_file_logger(name=f'{__name__}_observation_logger', result_dir=self.result_dir)
 
         agent_config = config['agent_config']
         self.converter = CachingStrategyRLConverter(0)

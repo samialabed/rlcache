@@ -1,5 +1,5 @@
 {
-  "name": "RLCachingStrategy",
+  "name": "caching_dqn_network",
   "type": "dqn",
   "memory_spec": {
     "type": "prioritized_replay",
