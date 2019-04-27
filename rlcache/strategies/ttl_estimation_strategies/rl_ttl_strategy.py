@@ -2,9 +2,6 @@ import logging
 import time
 from typing import Dict
 
-from rlgraph.agents import Agent
-from rlgraph.spaces import FloatBox
-
 from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observer import ObservationType
 from rlcache.strategies.ttl_estimation_strategies.base_ttl_strategy import TtlStrategy
@@ -12,6 +9,8 @@ from rlcache.strategies.ttl_estimation_strategies.rl_ttl_agent_state import TTLA
     TTLAgentSystemState
 from rlcache.utils.loggers import create_file_logger
 from rlcache.utils.vocabulary import Vocabulary
+from rlgraph.agents import Agent
+from rlgraph.spaces import FloatBox
 
 
 class RLTtlStrategy(TtlStrategy):
@@ -51,6 +50,7 @@ class RLTtlStrategy(TtlStrategy):
         observed_experience = self.observed_keys[key]
         stored_state = observed_experience.state
         stored_agent_action = observed_experience.agent_action
+        first_observation_time = observed_experience.observation_time
 
         if observation_type == ObservationType.Hit:
             stored_state.hit_count += 1
@@ -61,7 +61,6 @@ class RLTtlStrategy(TtlStrategy):
 
         else:
             # Include eviction, invalidation, and miss
-            first_observation_time = stored_state.observation_time
             estimated_ttl = stored_agent_action.item()
             real_ttl = current_time - first_observation_time
             stored_state.step_code = observation_type.value
@@ -99,18 +98,19 @@ class RLTtlStrategy(TtlStrategy):
         cache_utility = cache_information.size / cache_information.max_capacity()
 
         state = TTLAgentSystemState(encoded_key=encoded_key,
-                                    observation_time=observation_time,
                                     hit_count=0,
                                     step_code=0,
                                     cache_utility=cache_utility,
                                     operation_type=operation_type.value)
 
-        agent_action = self.agent.get_action(state.to_numpy())
+        state_as_numpy = state.to_numpy()
+        agent_action = self.agent.get_action(state_as_numpy)
         action = agent_action.item()
 
         self.observed_keys[key] = TTLAgentObservedExperience(state=state,
                                                              agent_action=agent_action,
-                                                             starting_state=state.copy())
+                                                             starting_state=state.copy(),
+                                                             observation_time=observation_time)
 
         return action
 
