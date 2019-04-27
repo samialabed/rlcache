@@ -95,7 +95,7 @@ class RLTtlStrategy(TtlStrategy):
                      cache_information: CacheInformation) -> float:
         observation_time = time.time()
         encoded_key = self.key_vocab.add_or_get_id(key)
-        cache_utility = cache_information.size / cache_information.max_capacity()
+        cache_utility = cache_information.size / cache_information.max_capacity
 
         state = TTLAgentSystemState(encoded_key=encoded_key,
                                     hit_count=0,

@@ -11,6 +11,12 @@
       "units": 64,
       "activation": "relu",
       "scope": "hidden"
+    },
+    {
+      "type": "dense",
+      "units": 64,
+      "activation": "relu",
+      "scope": "hidden2"
     }
   ],
   "preprocessing_spec": [],
