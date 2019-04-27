@@ -8,7 +8,7 @@ import numpy as np
 @dataclasses.dataclass
 class AgentSystemState(ABC):
     def to_numpy(self) -> np.ndarray:
-        return np.asarray(dataclasses.astuple(self))
+        return np.array(dataclasses.astuple(self))
 
     @classmethod
     def from_numpy(cls, encoded: np.ndarray):

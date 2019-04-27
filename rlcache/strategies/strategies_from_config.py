@@ -8,9 +8,9 @@ from rlcache.strategies.caching_strategies.simple_strategies import OnReadWriteC
 from rlcache.strategies.eviction_strategies.base_eviction_strategy import EvictionStrategy
 from rlcache.strategies.eviction_strategies.lru_eviction_strategy import LRUEvictionStrategy
 from rlcache.strategies.eviction_strategies.rl_eviction_strategy import RLEvictionStrategy
-from rlcache.strategies.ttl_selection_strategies.base_ttl_strategy import TtlStrategy
-from rlcache.strategies.ttl_selection_strategies.fixed_ttl_strategy import FixedTtlStrategy
-from rlcache.strategies.ttl_selection_strategies.rl_ttl_strategy import RLTtlStrategy
+from rlcache.strategies.ttl_estimation_strategies.base_ttl_strategy import TtlStrategy
+from rlcache.strategies.ttl_estimation_strategies.fixed_ttl_strategy import FixedTtlStrategy
+from rlcache.strategies.ttl_estimation_strategies.rl_ttl_strategy import RLTtlStrategy
 
 
 def strategies_from_config(config: Dict[str, any], results_dir: str) -> [CachingStrategy,

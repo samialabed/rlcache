@@ -43,9 +43,9 @@
   "update_spec": {
     "do_updates": true,
     "update_interval": 4,
-    "steps_before_update": 50000,
+    "steps_before_update": 4,
     "batch_size": 512,
-    "sync_interval": 500000,
+    "sync_interval": 4,
     "num_iterations": 1
   },
   "optimizer_spec": {
@@ -55,16 +55,5 @@
   "value_function_optimizer_spec": {
     "type": "adam",
     "learning_rate": 0.0003
-  },
-  "exploration_spec": {
-    "epsilon_spec": {
-      "decay_spec": {
-        "type": "linear_decay",
-        "from": 1.0,
-        "to": 0.05,
-        "start_timestep": 0,
-        "num_timesteps": 500000
-      }
-    }
   }
 }

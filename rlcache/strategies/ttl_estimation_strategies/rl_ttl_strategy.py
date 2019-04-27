@@ -7,8 +7,8 @@ from rlgraph.spaces import FloatBox
 
 from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observer import ObservationType
-from rlcache.strategies.ttl_selection_strategies.base_ttl_strategy import TtlStrategy
-from rlcache.strategies.ttl_selection_strategies.rl_ttl_agent_state import TTLAgentObservedExperience, \
+from rlcache.strategies.ttl_estimation_strategies.base_ttl_strategy import TtlStrategy
+from rlcache.strategies.ttl_estimation_strategies.rl_ttl_agent_state import TTLAgentObservedExperience, \
     TTLAgentSystemState
 from rlcache.utils.loggers import create_file_logger
 from rlcache.utils.vocabulary import Vocabulary
@@ -33,12 +33,13 @@ class RLTtlStrategy(TtlStrategy):
                                      state_space=FloatBox(shape=(fields_in_state,)),
                                      action_space=FloatBox(low=0, high=maximum_ttl, shape=(1,)))
 
+        # TODO refactor into common RL interface for all strategies
         self.logger = logging.getLogger(__name__)
         self.reward_logger = create_file_logger(name=f'{__name__}_reward_logger', result_dir=self.result_dir)
         self.loss_logger = create_file_logger(name=f'{__name__}_loss_logger', result_dir=self.result_dir)
         self.observation_logger = create_file_logger(name=f'{__name__}_observation_logger', result_dir=self.result_dir)
         self.ttl_logger = create_file_logger(name=f'{__name__}_ttl_logger', result_dir=self.result_dir)
-        self.vocabulary = Vocabulary()
+        self.key_vocab = Vocabulary()
 
     def observe(self, key: str, observation_type: ObservationType, *args, **kwargs):
         if key not in self.observed_keys:
@@ -59,7 +60,6 @@ class RLTtlStrategy(TtlStrategy):
         # it was evicted by another policy don't attempt to learn stuff from this?
 
         else:
-
             # Include eviction, invalidation, and miss
             first_observation_time = stored_state.observation_time
             estimated_ttl = stored_agent_action.item()
@@ -81,6 +81,7 @@ class RLTtlStrategy(TtlStrategy):
             self.cum_reward += reward
             self.reward_logger.info(f'{reward}')
             del self.observed_keys[key]
+            # TODO use self.agent.update_schedule to decide when to call update
             loss = self.agent.update()
             if loss is not None:
                 self.loss_logger.info(f'{loss[0]}')
@@ -94,7 +95,7 @@ class RLTtlStrategy(TtlStrategy):
                      operation_type: OperationType,
                      cache_information: CacheInformation) -> float:
         observation_time = time.time()
-        encoded_key = self.vocabulary.add_or_get_id(key)
+        encoded_key = self.key_vocab.add_or_get_id(key)
         cache_utility = cache_information.size / cache_information.max_capacity()
 
         state = TTLAgentSystemState(encoded_key=encoded_key,
