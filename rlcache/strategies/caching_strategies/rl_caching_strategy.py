@@ -10,7 +10,7 @@ from rlcache.backend import TTLCache, InMemoryStorage
 from rlcache.cache_constants import OperationType
 from rlcache.observer import ObservationType
 from rlcache.rl_model.converter import RLConverter
-from rlcache.strategies.caching_strategies.caching_strategy_base import CachingStrategy
+from rlcache.strategies.caching_strategies.base_caching_strategy import CachingStrategy
 from rlcache.utils.loggers import create_file_logger
 from rlcache.utils.vocabulary import Vocabulary
 

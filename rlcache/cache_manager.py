@@ -86,7 +86,5 @@ class CacheManager(object):
 
             self.eviction_strategy.observe(key, ObservationType.Write, {'cache_stats': self.cache_stats,
                                                                         'ttl': ttl})
-            self.ttl_strategy.observe(key, ObservationType.Write, {'cache_stats': self.cache_stats,
-                                                                   'ttl': ttl})
         else:
             self.cache_stats.should_cache_false += 1

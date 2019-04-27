@@ -2,7 +2,7 @@ from typing import Dict
 
 from rlcache.cache_constants import OperationType
 from rlcache.observer import ObservationType
-from rlcache.strategies.caching_strategies.caching_strategy_base import CachingStrategy
+from rlcache.strategies.caching_strategies.base_caching_strategy import CachingStrategy
 from rlcache.utils.loggers import create_file_logger
 
 

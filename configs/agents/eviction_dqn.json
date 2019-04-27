@@ -3,20 +3,26 @@
   "type": "dqn",
   "memory_spec": {
     "type": "prioritized_replay",
-    "capacity": 1000
+    "capacity": 500
   },
   "network_spec": [
     {
       "type": "dense",
       "units": 64,
       "activation": "relu",
-      "scope": "hidden"
+      "scope": "hidden1"
+    },
+    {
+      "type": "dense",
+      "units": 64,
+      "activation": "relu",
+      "scope": "hidden2"
     }
   ],
   "preprocessing_spec": [],
   "optimizer_spec": {
     "type": "adam",
-    "learning_rate": 0.003
+    "learning_rate": 0.0003
   },
   "update_spec": {
     "do_updates": true,
@@ -32,7 +38,7 @@
         "from": 1.0,
         "to": 0.05,
         "start_timestep": 0,
-        "num_timesteps": 500
+        "num_timesteps": 34000
       }
     }
   }

@@ -4,6 +4,7 @@ from typing import Dict
 
 
 class ObservationType(Enum):
+    New = 0
     Hit = 1
     Miss = 2
     Invalidate = 3

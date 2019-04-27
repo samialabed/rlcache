@@ -18,7 +18,7 @@
       "state_configs": {
         "value_field_length": 10
       },
-      "agent_config": "configs/agents/ttl_dqn.json"
+      "agent_config": "configs/agents/ttl_sac.json"
     },
     "eviction_strategy_settings": {
       "type": "lru"

@@ -2,15 +2,15 @@ import json
 import os
 from typing import Dict
 
-from rlcache.strategies.caching_strategies.caching_strategy_base import CachingStrategy
+from rlcache.strategies.caching_strategies.base_caching_strategy import CachingStrategy
 from rlcache.strategies.caching_strategies.rl_caching_strategy import RLCachingStrategy
 from rlcache.strategies.caching_strategies.simple_strategies import OnReadWriteCacheStrategy, OnReadOnlyCacheStrategy
-from rlcache.strategies.eviction_strategies.eviction_strategy_base import EvictionStrategy
+from rlcache.strategies.eviction_strategies.base_eviction_strategy import EvictionStrategy
 from rlcache.strategies.eviction_strategies.lru_eviction_strategy import LRUEvictionStrategy
 from rlcache.strategies.eviction_strategies.rl_eviction_strategy import RLEvictionStrategy
-from rlcache.strategies.ttl_selection_strategies.ttl_strategy_base import TtlStrategy
-from rlcache.strategies.ttl_selection_strategies.ttl_strategy_fixed import FixedTtlStrategy
-from rlcache.strategies.ttl_selection_strategies.ttl_strategy_rl import RLTtlStrategy
+from rlcache.strategies.ttl_selection_strategies.base_ttl_strategy import TtlStrategy
+from rlcache.strategies.ttl_selection_strategies.fixed_ttl_strategy import FixedTtlStrategy
+from rlcache.strategies.ttl_selection_strategies.rl_ttl_strategy import RLTtlStrategy
 
 
 def strategies_from_config(config: Dict[str, any], results_dir: str) -> [CachingStrategy,

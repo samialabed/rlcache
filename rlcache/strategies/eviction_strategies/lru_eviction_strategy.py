@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from rlcache.backend import TTLCache
 from rlcache.observer import ObservationType
-from rlcache.strategies.eviction_strategies.eviction_strategy_base import EvictionStrategy
+from rlcache.strategies.eviction_strategies.base_eviction_strategy import EvictionStrategy
 
 
 class LRUEvictionStrategy(EvictionStrategy):

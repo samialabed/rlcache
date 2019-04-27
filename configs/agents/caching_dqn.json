@@ -16,7 +16,7 @@
   "preprocessing_spec": [],
   "optimizer_spec": {
     "type": "adam",
-    "learning_rate": 0.003
+    "learning_rate": 0.0003
   },
   "update_spec": {
     "do_updates": true,

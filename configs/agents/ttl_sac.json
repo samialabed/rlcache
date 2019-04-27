@@ -1,0 +1,70 @@
+{
+  "name": "ttl_sac_network",
+  "type": "sac",
+  "discount": 0.99,
+  "initial_alpha": 1.0,
+  "target_entropy": -1.0,
+  "double_q": true,
+  "memory_spec": {
+    "type": "prioritized_replay",
+    "capacity": 1000
+  },
+  "observe_spec": {
+    "buffer_size": 1000
+  },
+  "network_spec": [
+    {
+      "type": "dense",
+      "units": 64,
+      "activation": "relu",
+      "scope": "hidden1"
+    },
+    {
+      "type": "dense",
+      "units": 64,
+      "activation": "relu",
+      "scope": "hidden2"
+    }
+  ],
+  "value_function_spec": [
+    {
+      "type": "dense",
+      "units": 64,
+      "activation": "relu",
+      "scope": "vf-hidden1"
+    },
+    {
+      "type": "dense",
+      "units": 64,
+      "activation": "relu",
+      "scope": "vf-hidden2"
+    }
+  ],
+  "update_spec": {
+    "do_updates": true,
+    "update_interval": 4,
+    "steps_before_update": 50000,
+    "batch_size": 512,
+    "sync_interval": 500000,
+    "num_iterations": 1
+  },
+  "optimizer_spec": {
+    "type": "adam",
+    "learning_rate": 0.0003
+  },
+  "value_function_optimizer_spec": {
+    "type": "adam",
+    "learning_rate": 0.0003
+  },
+  "exploration_spec": {
+    "epsilon_spec": {
+      "decay_spec": {
+        "type": "linear_decay",
+        "from": 1.0,
+        "to": 0.05,
+        "start_timestep": 0,
+        "num_timesteps": 500000
+      }
+    }
+  }
+}

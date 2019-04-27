@@ -3,7 +3,7 @@ from typing import Dict
 import time
 
 from rlcache.observer import ObservationType
-from rlcache.strategies.ttl_selection_strategies.ttl_strategy_base import TtlStrategy
+from rlcache.strategies.ttl_selection_strategies.base_ttl_strategy import TtlStrategy
 from rlcache.utils.loggers import create_file_logger
 
 
