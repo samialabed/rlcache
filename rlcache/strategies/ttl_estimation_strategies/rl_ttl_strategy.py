@@ -1,6 +1,7 @@
 import logging
-import time
 from typing import Dict
+
+import time
 
 from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observer import ObservationType
@@ -36,11 +37,10 @@ class RLTtlStrategy(TtlStrategy):
         self.logger = logging.getLogger(__name__)
         self.reward_logger = create_file_logger(name=f'{__name__}_reward_logger', result_dir=self.result_dir)
         self.loss_logger = create_file_logger(name=f'{__name__}_loss_logger', result_dir=self.result_dir)
-        self.observation_logger = create_file_logger(name=f'{__name__}_observation_logger', result_dir=self.result_dir)
         self.ttl_logger = create_file_logger(name=f'{__name__}_ttl_logger', result_dir=self.result_dir)
         self.key_vocab = Vocabulary()
 
-    def observe(self, key: str, observation_type: ObservationType, *args, **kwargs):
+    def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
         if key not in self.observed_keys:
             self.logger.error(f'key: {key} is has not been observed in {__name__}, '
                               f'observation_type:{observation_type.name}')
@@ -64,30 +64,17 @@ class RLTtlStrategy(TtlStrategy):
             estimated_ttl = stored_agent_action.item()
             real_ttl = current_time - first_observation_time
             stored_state.step_code = observation_type.value
+            stored_state.cache_utility = info['cache_utility']
 
             # log the difference between the estimated ttl and real ttl
             self.ttl_logger.info(f'{observation_type.name},{key},{estimated_ttl},{real_ttl},{stored_state.hit_count}')
-
-            reward = self.system_reward(observation_type, observed_experience, real_ttl)
-
-            self.agent.observe(preprocessed_states=observed_experience.starting_state.to_numpy(),
-                               actions=stored_agent_action,
-                               internals=[],
-                               rewards=reward,
-                               next_states=stored_state.to_numpy(),
-                               terminals=False)
-
-            self.cum_reward += reward
-            self.reward_logger.info(f'{reward}')
+            self.reward_agent(observation_type, observed_experience, real_ttl)
             del self.observed_keys[key]
-            # TODO use self.agent.update_schedule to decide when to call update
-            loss = self.agent.update()
-            if loss is not None:
-                self.loss_logger.info(f'{loss[0]}')
-            self.observation_seen += 1
-            if self.observation_seen % self.checkpoint_steps == 0:
-                self.logger.info(
-                    f'Observation seen so far: {self.observation_seen}, reward so far: {self.cum_reward}')
+
+        self.observation_seen += 1
+        if self.observation_seen % self.checkpoint_steps == 0:
+            self.logger.info(
+                f'Observation seen so far: {self.observation_seen}, reward so far: {self.cum_reward}')
 
     def estimate_ttl(self, key: str,
                      values: Dict[str, any],
@@ -95,7 +82,7 @@ class RLTtlStrategy(TtlStrategy):
                      cache_information: CacheInformation) -> float:
         observation_time = time.time()
         encoded_key = self.key_vocab.add_or_get_id(key)
-        cache_utility = cache_information.size / cache_information.max_capacity
+        cache_utility = cache_information.cache_utility
 
         state = TTLAgentSystemState(encoded_key=encoded_key,
                                     hit_count=0,
@@ -114,13 +101,14 @@ class RLTtlStrategy(TtlStrategy):
 
         return action
 
-    def system_reward(self, observation_type: ObservationType,
-                      experience: TTLAgentObservedExperience,
-                      real_ttl: time) -> int:
+    def reward_agent(self, observation_type: ObservationType,
+                     experience: TTLAgentObservedExperience,
+                     real_ttl: time) -> int:
         # reward more utilisation of the cache capacity given more hits
-        state = experience.state
+        final_state = experience.state
+
         difference_in_ttl = real_ttl - experience.agent_action.item()
-        reward = state.hit_count * (1 + state.cache_utility)
+        reward = (final_state.hit_count + difference_in_ttl) * (1 + final_state.cache_utility)
 
         # TODO Test various reward functions
         if self.experimental_reward:
@@ -128,8 +116,23 @@ class RLTtlStrategy(TtlStrategy):
                 # if invalidation reward 0 for good invalidation, and negative value for how far away it was.
                 reward = difference_in_ttl
             else:
-                # miss\expire\eviction. reward 0 for no hits? or
-                reward = state.hit_count * (1 + state.cache_utility)
+                # miss\expire\eviction. reward 0 for no hits?
+                reward = final_state.hit_count * (1 + final_state.cache_utility)
 
-        self.logger.debug(f'{__name__}: Hits: {state.hit_count}, ttl diff: {difference_in_ttl}, Reward: {reward}')
+        self.logger.debug(f'{__name__}: Hits: {final_state.hit_count}, ttl diff: {difference_in_ttl}, Reward: {reward}')
+
+        self.agent.observe(preprocessed_states=experience.starting_state.to_numpy(),
+                           actions=experience.agent_action,
+                           internals=[],
+                           rewards=reward,
+                           next_states=final_state.to_numpy(),
+                           terminals=False)
+
+        self.cum_reward += reward
+        self.reward_logger.info(f'{reward}')
+        # TODO use self.agent.update_schedule to decide when to call update
+        loss = self.agent.update()
+        if loss is not None:
+            self.loss_logger.info(f'{loss[0]}')
+
         return reward

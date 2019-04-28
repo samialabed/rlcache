@@ -52,7 +52,7 @@ class RLCachingStrategy(CachingStrategy):
                                      state_space=FloatBox(shape=(fields_in_state,)),
                                      action_space=IntBox(2))
         self._incomplete_experiences = TTLCache(InMemoryStorage())
-        self._incomplete_experiences.register_hook_func(self._observe_expired_incomplete_experience)
+        self._incomplete_experiences.expired_entry_callback(self._observe_expired_incomplete_experience)
 
     def should_cache(self, key: str, values: Dict[str, str], ttl: int, operation_type: OperationType) -> bool:
         # TODO what about the case of a cache key that exist already in the incomplete exp?

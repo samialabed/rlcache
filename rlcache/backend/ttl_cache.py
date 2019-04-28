@@ -33,7 +33,7 @@ class TTLCache(object):
         self.evict_hook_func = []
         self.key_to_expiration_item = {}  # type: Dict[str, _ExpirationListEntry]
 
-    def register_hook_func(self, hook: Callable[[KeyType, ObservationType, InfoType], None]):
+    def expired_entry_callback(self, hook: Callable[[KeyType, ObservationType, InfoType], None]):
         """register hooks that are called upon evictions."""
         self.evict_hook_func.append(hook)
 
@@ -86,8 +86,11 @@ class TTLCache(object):
             heapq.heappop(self.expiration_time_list)
 
     def invoke_hooks(self, key, stored_values, eviction_time):
+        cache_utility = self.size() / self.capacity()
         for hook in self.evict_hook_func:
-            hook(key, ObservationType.Expiration, {'value': stored_values, 'expire_at': eviction_time})
+            hook(key, ObservationType.Expiration, {'value': stored_values,
+                                                   'expire_at': eviction_time,
+                                                   'cache_utility': cache_utility})
 
     def capacity(self) -> int:
         return self.memory.capacity

@@ -25,7 +25,7 @@ class RLEvictionStrategy(EvictionStrategy):
         self.checkpoint_steps = config['checkpoint_steps']
 
         self._incomplete_experiences = TTLCache(InMemoryStorage())
-        self._incomplete_experiences.register_hook_func(self._observe_expired_incomplete_experience)
+        self._incomplete_experiences.expired_entry_callback(self._observe_expired_incomplete_experience)
         self.view_of_the_cache = {}  # type: Dict[str, Dict[str, any]]
         self._end_episode_observation = {ObservationType.Invalidate, ObservationType.Miss, ObservationType.Expiration}
 

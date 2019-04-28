@@ -43,6 +43,10 @@ class CacheInformation(object):
     def size(self):
         return self._size_check_func()
 
+    @property
+    def cache_utility(self):
+        return self.size / self.max_capacity
+
     def __str__(self):
         return json.dumps({"Invalidation": self.invalidate,
                            "Hits": self.hit,

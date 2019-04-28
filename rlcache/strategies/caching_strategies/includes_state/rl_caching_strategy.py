@@ -75,7 +75,7 @@ class RLCachingStrategy(CachingStrategy):
                                      state_space=FloatBox(shape=(flattened_num_cols,)),
                                      action_space=IntBox(2, shape=(1,)))
         self._incomplete_experience_storage = TTLCache(InMemoryStorage(capacity=config['observer_storage_capacity']))
-        self._incomplete_experience_storage.register_hook_func(self._observe_expired_incomplete_experience)
+        self._incomplete_experience_storage.expired_entry_callback(self._observe_expired_incomplete_experience)
 
         # evaluation specific variables
         self.episode_reward = 0  # type: int
