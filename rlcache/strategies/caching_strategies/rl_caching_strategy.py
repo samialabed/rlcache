@@ -3,8 +3,6 @@ from dataclasses import dataclass
 from typing import Dict
 
 import numpy as np
-from rlgraph.agents import Agent
-from rlgraph.spaces import FloatBox, IntBox
 
 from rlcache.backend import TTLCache, InMemoryStorage
 from rlcache.cache_constants import OperationType
@@ -13,7 +11,11 @@ from rlcache.rl_model.converter import RLConverter
 from rlcache.strategies.caching_strategies.base_caching_strategy import CachingStrategy
 from rlcache.utils.loggers import create_file_logger
 from rlcache.utils.vocabulary import Vocabulary
+from rlgraph.agents import Agent
+from rlgraph.spaces import FloatBox, IntBox
 
+
+# TODO refactor this to be like the other RL strategies
 
 @dataclass
 class _IncompleteExperienceEntry(object):
@@ -38,10 +40,8 @@ class RLCachingStrategy(CachingStrategy):
         self.episode_reward = 0
         self.checkpoint_steps = config['checkpoint_steps']
 
-        self.logger = logging.getLogger(__name__)
-        self.reward_logger = create_file_logger(name=f'{__name__}_reward_logger', result_dir=self.result_dir)
-        self.loss_logger = create_file_logger(name=f'{__name__}_loss_logger', result_dir=self.result_dir)
-        self.observation_logger = create_file_logger(name=f'{__name__}_observation_logger', result_dir=self.result_dir)
+        self._incomplete_experiences = TTLCache(InMemoryStorage())
+        self._incomplete_experiences.expired_entry_callback(self._observe_expired_incomplete_experience)
 
         agent_config = config['agent_config']
         self.converter = CachingStrategyRLConverter(0)
@@ -51,8 +51,12 @@ class RLCachingStrategy(CachingStrategy):
         self.agent = Agent.from_spec(agent_config,
                                      state_space=FloatBox(shape=(fields_in_state,)),
                                      action_space=IntBox(2))
-        self._incomplete_experiences = TTLCache(InMemoryStorage())
-        self._incomplete_experiences.expired_entry_callback(self._observe_expired_incomplete_experience)
+
+        self.logger = logging.getLogger(__name__)
+        name = 'rl_caching_strategy'
+        self.reward_logger = create_file_logger(name=f'{name}_reward_logger', result_dir=self.result_dir)
+        self.loss_logger = create_file_logger(name=f'{name}_loss_logger', result_dir=self.result_dir)
+        self.observation_logger = create_file_logger(name=f'{name}_observation_logger', result_dir=self.result_dir)
 
     def should_cache(self, key: str, values: Dict[str, str], ttl: int, operation_type: OperationType) -> bool:
         # TODO what about the case of a cache key that exist already in the incomplete exp?

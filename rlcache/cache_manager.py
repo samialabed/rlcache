@@ -18,7 +18,7 @@ class CacheManager(object):
         self.cache.expired_entry_callback(self.caching_strategy.observe)
         self.cache.expired_entry_callback(self.eviction_strategy.observe)
         self.cache.expired_entry_callback(self.ttl_strategy.observe)
-        self.cache_hit_logger = create_file_logger(result_dir=result_dir, name=f'{__name__}_cache_hit_logger')
+        self.cache_hit_logger = create_file_logger(result_dir=result_dir, name=f'cache_hit_logger')
 
     def get(self, key: str) -> Dict[str, any]:
         if self.cache.contains(key):

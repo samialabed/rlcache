@@ -42,9 +42,10 @@ class RLEvictionStrategy(EvictionStrategy):
                                      action_space=IntBox(low=0, high=2))
 
         self.logger = logging.getLogger(__name__)
-        self.reward_logger = create_file_logger(name=f'{__name__}_reward_logger', result_dir=self.result_dir)
-        self.loss_logger = create_file_logger(name=f'{__name__}_loss_logger', result_dir=self.result_dir)
-        self.observation_logger = create_file_logger(name=f'{__name__}_observation_logger', result_dir=self.result_dir)
+        name = 'rl_eviction_strategy'
+        self.reward_logger = create_file_logger(name=f'{name}_reward_logger', result_dir=self.result_dir)
+        self.loss_logger = create_file_logger(name=f'{name}_loss_logger', result_dir=self.result_dir)
+        self.observation_logger = create_file_logger(name=f'{name}_observation_logger', result_dir=self.result_dir)
         self.key_vocab = Vocabulary()
 
     def trim_cache(self, cache: TTLCache) -> List[str]:

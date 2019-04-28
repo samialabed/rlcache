@@ -13,7 +13,8 @@ class EvictionStrategyRLConverter(RLConverter):
     def __init__(self, result_dir: str):
         self.vocabulary = Vocabulary(add_pad=True, add_unk=False)
         self.logger = logging.getLogger(__name__)
-        self.performance_logger = create_file_logger(name=f'{__name__}_performance_logger', result_dir=result_dir)
+        name = 'rl_eviction_strategy'
+        self.performance_logger = create_file_logger(name=f'{name}_performance_logger', result_dir=result_dir)
 
     def system_to_agent_state(self, *args, **kwargs) -> np.ndarray:
         pass

@@ -35,15 +35,15 @@ class RLTtlStrategy(TtlStrategy):
 
         # TODO refactor into common RL interface for all strategies
         self.logger = logging.getLogger(__name__)
-        self.reward_logger = create_file_logger(name=f'{__name__}_reward_logger', result_dir=self.result_dir)
-        self.loss_logger = create_file_logger(name=f'{__name__}_loss_logger', result_dir=self.result_dir)
-        self.ttl_logger = create_file_logger(name=f'{__name__}_ttl_logger', result_dir=self.result_dir)
+        name = 'rl_ttl_strategy'
+        self.reward_logger = create_file_logger(name=f'{name}_reward_logger', result_dir=self.result_dir)
+        self.loss_logger = create_file_logger(name=f'{name}_loss_logger', result_dir=self.result_dir)
+        self.ttl_logger = create_file_logger(name=f'{name}_ttl_logger', result_dir=self.result_dir)
         self.key_vocab = Vocabulary()
 
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
         if key not in self.observed_keys:
-            self.logger.error(f'key: {key} is has not been observed in {__name__}, '
-                              f'observation_type:{observation_type.name}')
+            self.logger.error(f'key: {key} is has not been observed. observation_type:{observation_type.name}')
             return  # haven't had to make a decision on it
 
         current_time = time.time()
@@ -119,7 +119,7 @@ class RLTtlStrategy(TtlStrategy):
                 # miss\expire\eviction. reward 0 for no hits?
                 reward = final_state.hit_count * (1 + final_state.cache_utility)
 
-        self.logger.debug(f'{__name__}: Hits: {final_state.hit_count}, ttl diff: {difference_in_ttl}, Reward: {reward}')
+        self.logger.debug(f'Hits: {final_state.hit_count}, ttl diff: {difference_in_ttl}, Reward: {reward}')
 
         self.agent.observe(preprocessed_states=experience.starting_state.to_numpy(),
                            actions=experience.agent_action,
