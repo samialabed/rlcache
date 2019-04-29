@@ -7,9 +7,9 @@ from pandas.tests.extension.numpy_.test_numpy_nested import np
 from rlcache.backend import TTLCache, InMemoryStorage
 from rlcache.observer import ObservationType
 from rlcache.strategies.eviction_strategies.base_eviction_strategy import EvictionStrategy
-from rlcache.strategies.eviction_strategies.rl_eviction_agent_state import EvictionAgentSystemState, \
+from rlcache.strategies.eviction_strategies.rl_eviction_state import EvictionAgentSystemState, \
     EvictionAgentIncompleteExperienceEntry
-from rlcache.strategies.eviction_strategies.rl_eviction_strategy_converter import EvictionStrategyRLConverter
+from rlcache.strategies.eviction_strategies.rl_eviction_state_converter import EvictionStrategyRLConverter
 from rlcache.utils.loggers import create_file_logger
 from rlcache.utils.vocabulary import Vocabulary
 from rlgraph.agents import Agent

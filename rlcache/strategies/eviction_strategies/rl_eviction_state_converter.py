@@ -4,7 +4,7 @@ import numpy as np
 
 from rlcache.observer import ObservationType
 from rlcache.rl_model.converter import RLConverter
-from rlcache.strategies.eviction_strategies.rl_eviction_agent_state import EvictionAgentIncompleteExperienceEntry
+from rlcache.strategies.eviction_strategies.rl_eviction_state import EvictionAgentIncompleteExperienceEntry
 from rlcache.utils.loggers import create_file_logger
 from rlcache.utils.vocabulary import Vocabulary
 

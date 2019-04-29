@@ -14,8 +14,8 @@ from rlgraph.agents import Agent
 from rlgraph.spaces import FloatBox
 
 
-class RLTtlStrategy(TtlStrategy):
-    """RL driven TTL estimation strategy."""
+class RLMultiTasksStrategy(TtlStrategy):
+    """RL driven multi task strategy - Caching, eviction, and ttl estimation."""
 
     def __init__(self, config: Dict[str, any], result_dir: str):
         super().__init__(config, result_dir)
@@ -28,6 +28,7 @@ class RLTtlStrategy(TtlStrategy):
         agent_config = config['agent_config']
         maximum_ttl = config['max_ttl']
         self.experimental_reward = config.get('experimental_reward', False)
+
         fields_in_state = len(TTLAgentSystemState.__slots__)
         self.agent = Agent.from_spec(agent_config,
                                      state_space=FloatBox(shape=(fields_in_state,)),
