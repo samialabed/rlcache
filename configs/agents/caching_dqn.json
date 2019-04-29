@@ -5,6 +5,8 @@
     "type": "prioritized_replay",
     "capacity": 1000
   },
+    "policy_spec": {
+  },
   "network_spec": [
     {
       "type": "dense",

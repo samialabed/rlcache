@@ -86,11 +86,17 @@ class TTLCache(object):
             heapq.heappop(self.expiration_time_list)
 
     def invoke_hooks(self, key, stored_values, eviction_time):
-        cache_utility = self.size() / self.capacity()
+        if self.capacity() is not None:
+            # bounded caches have a cache utility, unbounded one don't
+            cache_utility = self.size() / self.capacity()
+        else:
+            cache_utility = 0
+        info = {'value': stored_values,
+                'expire_at': eviction_time,
+                'cache_utility': cache_utility}
+        # if this is a bounded cache then assign a utility
         for hook in self.evict_hook_func:
-            hook(key, ObservationType.Expiration, {'value': stored_values,
-                                                   'expire_at': eviction_time,
-                                                   'cache_utility': cache_utility})
+            hook(key, ObservationType.Expiration, info)
 
     def capacity(self) -> int:
         return self.memory.capacity

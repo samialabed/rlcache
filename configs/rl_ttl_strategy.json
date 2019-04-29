@@ -1,5 +1,5 @@
 {
-  "experiment_name": "rl_ttl_strategy_only_no_episodes",
+  "experiment_name": "rl_ttl_strategy",
   "cache_backend_settings": {
     "type": "cache_inmemory",
     "capacity": 50000

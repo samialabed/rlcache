@@ -1,5 +1,5 @@
 {
-  "experiment_name": "rl_eviction_strategy_only_no_episodes",
+  "experiment_name": "rl_eviction_strategy",
   "cache_backend_settings": {
     "type": "cache_inmemory",
     "capacity": 500
@@ -21,7 +21,6 @@
       "state_configs": {
         "value_field_length": 10
       },
-      "cache_capacity": 500,
       "agent_config": "configs/agents/eviction_dqn.json"
     }
   }
