@@ -145,7 +145,7 @@ class RLEvictionStrategy(EvictionStrategy):
         starting_state = experience.starting_state
         action = experience.agent_action
         new_state = experience.state.copy()
-        new_state.expiration_count += 1
+        new_state.step_code = observation_type.value
 
         self._reward_agent(starting_state.to_numpy(), new_state.to_numpy(), action, reward)
 

@@ -43,6 +43,7 @@ class RLCachingStrategy(CachingStrategy):
         self.reward_logger = create_file_logger(name=f'{name}_reward_logger', result_dir=self.result_dir)
         self.loss_logger = create_file_logger(name=f'{name}_loss_logger', result_dir=self.result_dir)
         self.observation_logger = create_file_logger(name=f'{name}_observation_logger', result_dir=self.result_dir)
+        self.entry_hits_logger = create_file_logger(name=f'{name}_entry_hits_logger', result_dir=self.result_dir)
 
         self.key_vocab = Vocabulary()
 
@@ -102,6 +103,7 @@ class RLCachingStrategy(CachingStrategy):
 
         self._incomplete_experiences.delete(key)
 
+        self.entry_hits_logger.info(f'{key},{experience.state.hit_count}')
         reward = self.converter.system_to_agent_reward(experience)
         if self.experimental_reward:
             # TODO add cache utility to state and reward

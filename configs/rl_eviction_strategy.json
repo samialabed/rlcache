@@ -2,7 +2,7 @@
   "experiment_name": "rl_eviction_strategy",
   "cache_backend_settings": {
     "type": "cache_inmemory",
-    "capacity": 500
+    "capacity": 2500
   },
   "database_backend_settings": {
     "type": "inmemory"
@@ -13,7 +13,7 @@
     },
     "ttl_strategy_settings": {
       "type": "fixed",
-      "ttl": 120
+      "ttl": 60
     },
     "eviction_strategy_settings": {
       "type": "rl_driven",

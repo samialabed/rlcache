@@ -35,7 +35,7 @@ class CachingStrategyRLConverter(RLConverter):
             assert experience.state.step_code != ObservationType.Hit, \
                 'Logical conflict: terminal state for should not cache, with a hit stepcode. '
 
-            if experience.state.step_code == ObservationType.Miss:
+            if experience.state.step_code == ObservationType.Miss.value:
                 reward = -1
             else:
                 reward = 1

@@ -2,7 +2,7 @@
   "experiment_name": "rl_all_strategy",
   "cache_backend_settings": {
     "type": "cache_inmemory",
-    "capacity": 500
+    "capacity": 2500
   },
   "database_backend_settings": {
     "type": "inmemory"
@@ -15,7 +15,7 @@
     },
     "ttl_strategy_settings": {
       "type": "rl_driven",
-      "max_ttl": 300,
+      "max_ttl": 3600,
       "checkpoint_steps": 10000,
       "agent_config": "configs/agents/ttl_sac.json"
     },
