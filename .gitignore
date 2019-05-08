@@ -111,3 +111,5 @@ venv.bak/
 /datasets/
 !/ycsb/setup_script.sh
 /ycsb/ycsb*
+
+documented_results/
