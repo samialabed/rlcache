@@ -83,7 +83,7 @@ class RLEvictionStrategy(EvictionStrategy):
                 for key in keys_to_not_evict:
                     self._incomplete_experiences.delete(key)
                 self.logger.error('No keys were chosen to be evicted. Retrying.')
-                
+
         for key in keys_to_evict:
             # race condition: while in this loop a key expires and hit the observer pattern
             if key in self.view_of_the_cache:
@@ -165,3 +165,6 @@ class RLEvictionStrategy(EvictionStrategy):
         loss = self.agent.update()
         if loss is not None:
             self.loss_logger.info(f'{loss[0]}')
+
+    def close(self):
+        self._incomplete_experiences.clear()

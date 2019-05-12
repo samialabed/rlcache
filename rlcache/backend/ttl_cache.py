@@ -38,6 +38,8 @@ class TTLCache(object):
         self.evict_hook_func.append(hook)
 
     def delete(self, key: str):
+        if key in self.key_to_expiration_item:
+            self.key_to_expiration_item[key].dirty_delete = True
         self.memory.delete(key)
 
     def size(self) -> int:
@@ -90,7 +92,7 @@ class TTLCache(object):
             # bounded caches have a cache utility, unbounded one don't
             cache_utility = self.size() / self.capacity()
         else:
-            cache_utility = 0
+            cache_utility = 1.0
         info = {'value': stored_values,
                 'expire_at': eviction_time,
                 'cache_utility': cache_utility}
@@ -105,3 +107,6 @@ class TTLCache(object):
         self.key_to_expiration_item.clear()
         self.expiration_time_list.clear()
         self.memory.clear()
+
+    def items(self):
+        return self.memory.items()

@@ -30,6 +30,9 @@ class Storage(ABC):
     def contains(self, key: str) -> bool:
         raise NotImplementedError
 
+    def items(self):
+        raise NotImplementedError
+
     def __contains__(self, key):
         return self.contains(key)
 

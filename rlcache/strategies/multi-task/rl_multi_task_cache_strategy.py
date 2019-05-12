@@ -12,6 +12,7 @@ from rlcache.utils.loggers import create_file_logger
 from rlcache.utils.vocabulary import Vocabulary
 from rlgraph.agents import Agent
 from rlgraph.spaces import FloatBox
+from rlgraph.spaces import Dict as RLDict
 
 
 class RLMultiTasksStrategy(TtlStrategy):
@@ -30,6 +31,14 @@ class RLMultiTasksStrategy(TtlStrategy):
         self.experimental_reward = config.get('experimental_reward', False)
 
         fields_in_state = len(TTLAgentSystemState.__slots__)
+
+        action_space = RLDict({
+            'should_cache': FloatBox(low=0, high=2, shape=(1,)),
+            'ttl': FloatBox(low=0, high=maximum_ttl, shape=(1,)),
+            'eviction': FloatBox(low=0, high=2, shape=(1, ))
+
+        }, add_batch_rank=True)
+
         self.agent = Agent.from_spec(agent_config,
                                      state_space=FloatBox(shape=(fields_in_state,)),
                                      action_space=FloatBox(low=0, high=maximum_ttl, shape=(1,)))

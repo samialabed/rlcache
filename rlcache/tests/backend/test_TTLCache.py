@@ -82,15 +82,5 @@ class TestTTLCacheV2(TestCase):
 
         get_storage_results = storage.get(key)
         assert get_storage_results == expected_results, f"Expected '{expected_results}' but got {get_storage_results}"
-
-    def test_contains_after_expired_set(self):
-        storage = Mock()
-        cache = TTLCache(storage)
-        cache.set('key', '5', 2)
-        storage.set.assert_called_once_with('key', '5')
-        storage.get.return_value = 'Shouldnt be called'
-        sleep(4)  # maybe I can just mock time
-        storage.delete.assert_called_once_with('key')
-
     # def test_register_hook_func(self):
     #     self.fail()

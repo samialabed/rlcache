@@ -7,6 +7,7 @@ import numpy as np
 
 @dataclasses.dataclass
 class AgentSystemState(ABC):
+    # TODO simplify the class as well as let it use python DTO until to_numpy and from_numpy
     def to_numpy(self) -> np.ndarray:
         return np.array(dataclasses.astuple(self))
 

@@ -122,3 +122,9 @@ class RLCachingStrategy(CachingStrategy):
         loss = self.agent.update()
         if loss is not None:
             self.loss_logger.info(f'{loss[0]}')
+
+    def close(self):
+        for (k, v) in self._incomplete_experiences.items():
+            self._reward_experience(k, v, ObservationType.EndOfEpisode)
+
+        self._incomplete_experiences.clear()

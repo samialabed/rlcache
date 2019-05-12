@@ -37,7 +37,7 @@ def close():
     # TODO record an end of an episode
     path = str(request.path)
     REQUESTS_COUNTER[path] += 1
-
+    CACHE_MANAGER.close()
     return 'Success'
 
 

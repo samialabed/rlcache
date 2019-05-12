@@ -11,6 +11,7 @@ class ObservationType(Enum):
     Expiration = 4
     EvictionPolicy = 5
     Write = 6
+    EndOfEpisode = 7
 
 
 class Observer(ABC):

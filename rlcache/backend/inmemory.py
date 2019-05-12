@@ -17,6 +17,9 @@ class InMemoryStorage(Storage):
             raise OutOfMemoryError
         self.memory[key] = value
 
+    def items(self):
+        return self.memory.items()
+    
     def delete(self, key):
         if key in self.memory:
             del self.memory[key]
