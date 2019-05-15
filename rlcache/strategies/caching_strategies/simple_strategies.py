@@ -24,7 +24,7 @@ class OnReadWriteCacheStrategy(CachingStrategy):
             self.observed_entries[key] += 1
         else:
             hits = self.observed_entries[key]
-            self.entry_hits_logger.info(f'{key},{hits}')
+            self.entry_hits_logger.info(f'{self.episode_num},{key},{hits}')
             del self.observed_entries[key]
 
     def should_cache(self, key: str, values: Dict[str, str], ttl: int, operation_type: OperationType) -> bool:
@@ -41,7 +41,7 @@ class OnReadOnlyCacheStrategy(CachingStrategy):
         self.observed_entries = {}
 
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
-        self.observation_logger.info(f'{key},{observation_type.name}')
+        self.observation_logger.info(f'{self.episode_num},{key},{observation_type.name}')
         if key not in self.observed_entries:
             return
 
@@ -49,7 +49,7 @@ class OnReadOnlyCacheStrategy(CachingStrategy):
             self.observed_entries[key] += 1
         else:
             hits = self.observed_entries[key]
-            self.entry_hits_logger.info(f'{key},{hits}')
+            self.entry_hits_logger.info(f'{self.episode_num},{key},{hits}')
             del self.observed_entries[key]
 
     def should_cache(self, key: str, values: Dict[str, str], ttl: int, operation_type: OperationType) -> bool:

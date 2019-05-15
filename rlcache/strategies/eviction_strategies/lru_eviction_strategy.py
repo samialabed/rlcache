@@ -48,14 +48,14 @@ class LRUEvictionStrategy(EvictionStrategy):
         if action_taken is not None:
             if observation_type == ObservationType.Invalidate:
                 # eviction followed by invalidation.
-                self.performance_logger.info('TrueEvict')
+                self.performance_logger.info(f'{self.episode_num},TrueEvict')
             elif observation_type == ObservationType.Miss:
-                self.performance_logger.info('FalseEvict')
+                self.performance_logger.info(f'{self.episode_num},FalseEvict')
                 # Miss after making an eviction decision
             self._incomplete_experiences.delete(key)
 
     def _observe_expired_incomplete_experience(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
-        self.performance_logger.info('TrueEvict')
+        self.performance_logger.info(f'{self.episode_num},TrueEvict')
 
     def trim_cache(self, cache: TTLCache) -> List[str]:
         eviction_item = self.lru.popitem(last=False)

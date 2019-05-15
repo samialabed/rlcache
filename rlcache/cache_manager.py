@@ -26,13 +26,13 @@ class CacheManager(object):
     def get(self, key: str) -> Dict[str, any]:
         if self.cache.contains(key):
             self.cache_stats.hit += 1
-            self.evaluation_logger.info(f'{key},{ObservationType.Hit},{self.episode_num}')
+            self.evaluation_logger.info(f'{key},{ObservationType.Hit.name},{self.episode_num}')
             self.caching_strategy.observe(key, ObservationType.Hit, {})
             self.eviction_strategy.observe(key, ObservationType.Hit, {})
             self.ttl_strategy.observe(key, ObservationType.Hit, {})
             values = self.cache.get(key)
         else:
-            self.evaluation_logger.info(f'{key},{ObservationType.Miss},{self.episode_num}')
+            self.evaluation_logger.info(f'{key},{ObservationType.Miss.name},{self.episode_num}')
             self.cache_stats.miss += 1
             values = self.backend.get(key)
             self.caching_strategy.observe(key, ObservationType.Miss, {})
@@ -48,7 +48,7 @@ class CacheManager(object):
         self.eviction_strategy.observe(key, ObservationType.Invalidate, {})
 
         if self.cache.contains(key):
-            self.evaluation_logger.info(f'{key},{ObservationType.Invalidate},{self.episode_num}')
+            self.evaluation_logger.info(f'{key},{ObservationType.Invalidate.name},{self.episode_num}')
             self.cache_stats.invalidate += 1
             self.cache.delete(key)  # ensure key isn't cached anymore
             status = OperationType.Update
@@ -64,7 +64,7 @@ class CacheManager(object):
         self.eviction_strategy.observe(key, ObservationType.Invalidate, {})
 
         if self.cache.contains(key):
-            self.evaluation_logger.info(f'{key},{ObservationType.Invalidate},{self.episode_num}')
+            self.evaluation_logger.info(f'{key},{ObservationType.Invalidate.name},{self.episode_num}')
             self.cache_stats.invalidate += 1
             self.cache.delete(key)
         else:
@@ -89,7 +89,7 @@ class CacheManager(object):
             except OutOfMemoryError:
                 evicted_keys = self.eviction_strategy.trim_cache(self.cache)
                 for evicted_key in evicted_keys:
-                    self.evaluation_logger.info(f'{key},{ObservationType.EvictionPolicy},{self.episode_num}')
+                    self.evaluation_logger.info(f'{key},{ObservationType.EvictionPolicy.name},{self.episode_num}')
 
                     self.caching_strategy.observe(evicted_key, ObservationType.EvictionPolicy, {})
                     self.ttl_strategy.observe(evicted_key, ObservationType.EvictionPolicy, {})

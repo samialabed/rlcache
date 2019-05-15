@@ -93,7 +93,7 @@ class RLTtlStrategy(TtlStrategy):
             stored_state.cache_utility = self.cache_stats.cache_utility
 
             # log the difference between the estimated ttl and real ttl
-            self.ttl_logger.info(f'{observation_type.name},{key},{estimated_ttl},{real_ttl},{stored_state.hit_count}')
+            self.ttl_logger.info(f'{self.episode_num},{observation_type.name},{key},{estimated_ttl},{real_ttl},{stored_state.hit_count}')
             self.reward_agent(observation_type, observed_experience, real_ttl)
             self._incomplete_experiences.delete(key)
 
@@ -106,9 +106,9 @@ class RLTtlStrategy(TtlStrategy):
 
     def _observe_expiry_eviction(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
         """Observe decisions taken that hasn't been observed by main cache. e.g. don't cache -> ttl up -> no miss"""
-        self.observation_logger.info(f'{key},{observation_type}')
+        self.observation_logger.info(f'{self.episode_num},{key},{observation_type}')
         experience = info['value']  # type: TTLAgentObservedExperience
-        self.ttl_logger.info(f'{observation_type.name},{key},{experience.agent_action.item()},'
+        self.ttl_logger.info(f'{self.episode_num},{observation_type.name},{key},{experience.agent_action.item()},'
                              f'{experience.agent_action.item()},{experience.state.hit_count}')
         experience.state.step_code = observation_type.value
 
@@ -139,17 +139,18 @@ class RLTtlStrategy(TtlStrategy):
                            terminals=False)
 
         self.cum_reward += reward
-        self.reward_logger.info(f'{reward}')
+        self.reward_logger.info(f'{self.episode_num},{reward}')
         # TODO use self.agent.update_schedule to decide when to call update
         loss = self.agent.update()
         if loss is not None:
-            self.loss_logger.info(f'{loss[0]}')
+            self.loss_logger.info(f'{self.episode_num},{loss[0]}')
 
         return reward
 
     def close(self):
+        super().close()
         for (k, v) in self._incomplete_experiences.items():
-            self.ttl_logger.info(f'{ObservationType.EndOfEpisode.name},{k},{v.agent_action.item()},'
+            self.ttl_logger.info(f'{self.episode_num},{ObservationType.EndOfEpisode.name},{k},{v.agent_action.item()},'
                                  f'{v.agent_action.item()},{v.state.hit_count}')
 
         self._incomplete_experiences.clear()

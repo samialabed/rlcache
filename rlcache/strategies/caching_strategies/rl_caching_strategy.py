@@ -77,7 +77,7 @@ class RLCachingStrategy(CachingStrategy):
         if experience is None:
             return  # if I haven't had to make a decision on this, ignore it.
 
-        self.observation_logger.info(f'{key},{observation_type.name}')
+        self.observation_logger.info(f'{self.episode_num},{key},{observation_type.name}')
         if observation_type == ObservationType.Hit:
             experience.state.hit_count += 1
 
@@ -103,7 +103,7 @@ class RLCachingStrategy(CachingStrategy):
 
         self._incomplete_experiences.delete(key)
 
-        self.entry_hits_logger.info(f'{key},{experience.state.hit_count}')
+        self.entry_hits_logger.info(f'{self.episode_num},{key},{experience.state.hit_count}')
         reward = self.converter.system_to_agent_reward(experience)
         if self.experimental_reward:
             # TODO add cache utility to state and reward
@@ -117,13 +117,14 @@ class RLCachingStrategy(CachingStrategy):
                            terminals=False)
 
         self.episode_reward += reward
-        self.reward_logger.info(f'{reward}')
+        self.reward_logger.info(f'{self.episode_num},{reward}')
         self.logger.debug(f'Key: {key} is in terminal state because: {str(observation_type)}')
         loss = self.agent.update()
         if loss is not None:
-            self.loss_logger.info(f'{loss[0]}')
+            self.loss_logger.info(f'{self.episode_num},{loss[0]}')
 
     def close(self):
+        super().close()
         experiences_items = self._incomplete_experiences.items()
         for (k, v) in experiences_items:
             self._reward_experience(k, v, ObservationType.EndOfEpisode)

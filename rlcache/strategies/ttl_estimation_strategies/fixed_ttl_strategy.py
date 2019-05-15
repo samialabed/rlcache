@@ -35,7 +35,7 @@ class FixedTtlStrategy(TtlStrategy):
             hits = stored_values['hits']
             real_ttl = current_time - first_observation_time
             # log the difference between the estimated ttl and real ttl
-            self.ttl_logger.info(f'{observation_type.name},{key},{estimated_ttl},{real_ttl},{hits}')
+            self.ttl_logger.info(f'{self.episode_num},{observation_type.name},{key},{estimated_ttl},{real_ttl},{hits}')
             del self.observed_keys[key]
             if observation_type == ObservationType.Write:
                 self.observed_keys[key] = {'observation_time': current_time, 'estimated_ttl': self.ttl, 'hits': 0}

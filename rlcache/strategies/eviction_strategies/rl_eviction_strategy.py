@@ -97,7 +97,7 @@ class RLEvictionStrategy(EvictionStrategy):
         return keys_to_evict
 
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
-        self.observation_logger.info(f'{key},{observation_type}')
+        self.observation_logger.info(f'{self.episode_num},{key},{observation_type}')
 
         observed_key = self.converter.vocabulary.add_or_get_id(key)
         stored_experience = self._incomplete_experiences.get(key)
@@ -139,7 +139,7 @@ class RLEvictionStrategy(EvictionStrategy):
     def _observe_expired_incomplete_experience(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
         """Observe decisions taken that hasn't been observed by main cache. e.g. don't cache -> ttl up -> no miss"""
         assert observation_type == ObservationType.Expiration
-        self.observation_logger.info(f'{key},{observation_type}')
+        self.observation_logger.info(f'{self.episode_num},{key},{observation_type}')
 
         experience = info['value']  # type: EvictionAgentIncompleteExperienceEntry
         reward = self.converter.system_to_agent_reward(experience, observation_type)
@@ -161,12 +161,13 @@ class RLEvictionStrategy(EvictionStrategy):
                            rewards=reward,
                            next_states=new_state,
                            terminals=False)
-        self.reward_logger.info(f'{reward}')
+        self.reward_logger.info(f'{self.episode_num},{reward}')
 
         loss = self.agent.update()
         if loss is not None:
-            self.loss_logger.info(f'{loss[0]}')
+            self.loss_logger.info(f'{self.episode_num},{loss[0]}')
 
     def close(self):
+        super().close()
         self._incomplete_experiences.clear()
         self.agent.reset()

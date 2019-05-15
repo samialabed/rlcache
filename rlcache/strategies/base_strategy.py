@@ -10,6 +10,8 @@ class BaseStrategy(Observer, ABC):
         self.cache_stats = cache_stats
         self.result_dir = result_dir
         self.config = config
+        self.episode_num = 0
 
     def close(self):
+        self.episode_num += 1
         pass
