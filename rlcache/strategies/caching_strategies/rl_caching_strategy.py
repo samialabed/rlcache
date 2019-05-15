@@ -72,12 +72,12 @@ class RLCachingStrategy(CachingStrategy):
         return action
 
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
-        self.observation_logger.info(f'{key},{observation_type.name}')
         # TODO include stats/capacity information in the info dict
         experience = self._incomplete_experiences.get(key)  # type: CachingAgentIncompleteExperienceEntry
         if experience is None:
             return  # if I haven't had to make a decision on this, ignore it.
 
+        self.observation_logger.info(f'{key},{observation_type.name}')
         if observation_type == ObservationType.Hit:
             experience.state.hit_count += 1
 
@@ -128,4 +128,5 @@ class RLCachingStrategy(CachingStrategy):
         for (k, v) in experiences_items:
             self._reward_experience(k, v, ObservationType.EndOfEpisode)
 
+        self.agent.reset()
         self._incomplete_experiences.clear()

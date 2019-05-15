@@ -169,3 +169,4 @@ class RLEvictionStrategy(EvictionStrategy):
 
     def close(self):
         self._incomplete_experiences.clear()
+        self.agent.reset()

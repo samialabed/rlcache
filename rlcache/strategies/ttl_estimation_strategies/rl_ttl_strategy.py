@@ -153,3 +153,4 @@ class RLTtlStrategy(TtlStrategy):
                                  f'{v.agent_action.item()},{v.state.hit_count}')
 
         self._incomplete_experiences.clear()
+        self.agent.reset()

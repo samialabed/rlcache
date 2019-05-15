@@ -95,7 +95,7 @@ def insert():
 def end_loading_phase():
     # TODO maybe make this a POST endpoint that can receive configs?
     global skip_cache
-    skip_cache = True
+    skip_cache = False
     return 'Success'
 
 
