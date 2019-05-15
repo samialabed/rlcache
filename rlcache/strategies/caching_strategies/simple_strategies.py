@@ -1,14 +1,15 @@
 from typing import Dict
 
-from rlcache.cache_constants import OperationType
+from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observer import ObservationType
 from rlcache.strategies.caching_strategies.base_caching_strategy import CachingStrategy
 from rlcache.utils.loggers import create_file_logger
 
 
 class OnReadWriteCacheStrategy(CachingStrategy):
-    def __init__(self, config: Dict[str, any], result_dir):
-        super().__init__(config, result_dir)
+
+    def __init__(self, config: Dict[str, any], result_dir: str, cache_stats: CacheInformation):
+        super().__init__(config, result_dir, cache_stats)
         name = 'read_write_caching_strategy_'
         self.observation_logger = create_file_logger(name=f'{name}_observation_logger', result_dir=self.result_dir)
         self.entry_hits_logger = create_file_logger(name=f'{name}_entry_hits_logger', result_dir=self.result_dir)
@@ -32,8 +33,8 @@ class OnReadWriteCacheStrategy(CachingStrategy):
 
 
 class OnReadOnlyCacheStrategy(CachingStrategy):
-    def __init__(self, config: Dict[str, any], result_dir):
-        super().__init__(config, result_dir)
+    def __init__(self, config: Dict[str, any], result_dir: str, cache_stats: CacheInformation):
+        super().__init__(config, result_dir, cache_stats)
         name = 'read_only_caching_strategy_'
         self.observation_logger = create_file_logger(name=f'{name}_observation_logger', result_dir=self.result_dir)
         self.entry_hits_logger = create_file_logger(name=f'{name}_entry_hits_logger', result_dir=self.result_dir)

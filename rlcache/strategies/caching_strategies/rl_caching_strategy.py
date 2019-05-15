@@ -4,7 +4,7 @@ from typing import Dict
 import time
 
 from rlcache.backend import TTLCache, InMemoryStorage
-from rlcache.cache_constants import OperationType
+from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observer import ObservationType
 from rlcache.strategies.caching_strategies.base_caching_strategy import CachingStrategy
 from rlcache.strategies.caching_strategies.rl_caching_state import CachingAgentIncompleteExperienceEntry, \
@@ -18,8 +18,8 @@ from rlgraph.spaces import FloatBox, IntBox
 
 class RLCachingStrategy(CachingStrategy):
 
-    def __init__(self, config: Dict[str, any], result_dir):
-        super().__init__(config, result_dir)
+    def __init__(self, config: Dict[str, any], result_dir: str, cache_stats: CacheInformation):
+        super().__init__(config, result_dir, cache_stats)
         # evaluation specific variables
         self.observation_seen = 0
         self.episode_reward = 0
@@ -124,7 +124,8 @@ class RLCachingStrategy(CachingStrategy):
             self.loss_logger.info(f'{loss[0]}')
 
     def close(self):
-        for (k, v) in self._incomplete_experiences.items():
+        experiences_items = self._incomplete_experiences.items()
+        for (k, v) in experiences_items:
             self._reward_experience(k, v, ObservationType.EndOfEpisode)
 
         self._incomplete_experiences.clear()

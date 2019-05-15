@@ -14,6 +14,7 @@
     "ttl_strategy_settings": {
       "type": "rl_driven",
       "max_ttl": 1800,
+      "experimental_reward": true,
       "checkpoint_steps": 10000,
       "state_configs": {
         "value_field_length": 10

@@ -2,6 +2,7 @@ from typing import Dict
 
 import time
 
+from rlcache.cache_constants import CacheInformation
 from rlcache.observer import ObservationType
 from rlcache.strategies.ttl_estimation_strategies.base_ttl_strategy import TtlStrategy
 from rlcache.utils.loggers import create_file_logger
@@ -10,8 +11,8 @@ from rlcache.utils.loggers import create_file_logger
 class FixedTtlStrategy(TtlStrategy):
     """Fixed strategy that returns a preconfigured ttl."""
 
-    def __init__(self, config: Dict[str, any], result_dir: str):
-        super().__init__(config, result_dir)
+    def __init__(self, config: Dict[str, any], result_dir: str, cache_stats: CacheInformation):
+        super().__init__(config, result_dir, cache_stats)
         self.ttl = self.config['ttl']
         name = 'fixed_strategy'
         self.ttl_logger = create_file_logger(name=f'{name}_ttl_logger', result_dir=self.result_dir)

@@ -10,13 +10,13 @@
   "network_spec": [
     {
       "type": "dense",
-      "units": 32,
+      "units": 64,
       "activation": "relu",
       "scope": "hidden"
     },
     {
       "type": "dense",
-      "units": 32,
+      "units": 64,
       "activation": "relu",
       "scope": "hidden2"
     }
@@ -29,9 +29,9 @@
   "update_spec": {
     "do_updates": true,
     "update_interval": 4,
-    "steps_before_update": 5000,
+    "steps_before_update": 500,
     "batch_size": 512,
-    "sync_interval": 5000
+    "sync_interval": 500
   },
   "exploration_spec": {
     "epsilon_spec": {

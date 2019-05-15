@@ -63,9 +63,12 @@ class TTLCache(object):
         self.expire(current_time)
         self.memory.set(key, values)
         if key in self.key_to_expiration_item:  # update pointer
-            stored_value = self.key_to_expiration_item[key]
+            stored_value = self.key_to_expiration_item[key].copy()
+            self.key_to_expiration_item[key].eviction_time = -1
+
             stored_value.eviction_time = current_time + ttl
-            stored_value.dirty_delete = False
+            heapq.heappush(self.expiration_time_list, stored_value)
+            self.key_to_expiration_item[key] = stored_value
         else:
             expiration_entry = _ExpirationListEntry(eviction_time=current_time + ttl, key=key, dirty_delete=False)
             self.key_to_expiration_item[key] = expiration_entry
@@ -77,6 +80,10 @@ class TTLCache(object):
             key = expiration_entry.key
             stored_value = self.key_to_expiration_item[key]
 
+            if eviction_time == -1:
+                heapq.heappop(self.expiration_time_list)
+                continue
+
             if cur_time < eviction_time:
                 break
             # self.delete(key) leaves the expiration queue as is, as a trade-off between speed and memory. cleanup here.
@@ -85,17 +92,12 @@ class TTLCache(object):
                 self.invoke_hooks(key, stored_values, eviction_time)
                 # remove entries from cache and expiration queue
                 self.memory.delete(key)
+
             heapq.heappop(self.expiration_time_list)
 
     def invoke_hooks(self, key, stored_values, eviction_time):
-        if self.capacity() is not None:
-            # bounded caches have a cache utility, unbounded one don't
-            cache_utility = self.size() / self.capacity()
-        else:
-            cache_utility = 1.0
         info = {'value': stored_values,
-                'expire_at': eviction_time,
-                'cache_utility': cache_utility}
+                'expire_at': eviction_time}
         # if this is a bounded cache then assign a utility
         for hook in self.evict_hook_func:
             hook(key, ObservationType.Expiration, info)

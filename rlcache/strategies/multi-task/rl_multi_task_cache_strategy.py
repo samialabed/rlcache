@@ -3,19 +3,22 @@ from typing import Dict
 
 import time
 
-from rlcache.cache_constants import OperationType, CacheInformation
+from rlcache.backend.base import Storage
+from rlcache.cache_constants import OperationType
 from rlcache.observer import ObservationType
+from rlcache.strategies.caching_strategies.base_caching_strategy import CachingStrategy
+from rlcache.strategies.eviction_strategies.base_eviction_strategy import EvictionStrategy
 from rlcache.strategies.ttl_estimation_strategies.base_ttl_strategy import TtlStrategy
 from rlcache.strategies.ttl_estimation_strategies.rl_ttl_state import TTLAgentObservedExperience, \
     TTLAgentSystemState
 from rlcache.utils.loggers import create_file_logger
 from rlcache.utils.vocabulary import Vocabulary
 from rlgraph.agents import Agent
-from rlgraph.spaces import FloatBox
 from rlgraph.spaces import Dict as RLDict
+from rlgraph.spaces import FloatBox
 
 
-class RLMultiTasksStrategy(TtlStrategy):
+class RLMultiTasksStrategy(TtlStrategy, EvictionStrategy, CachingStrategy):
     """RL driven multi task strategy - Caching, eviction, and ttl estimation."""
 
     def __init__(self, config: Dict[str, any], result_dir: str):
@@ -28,20 +31,18 @@ class RLMultiTasksStrategy(TtlStrategy):
 
         agent_config = config['agent_config']
         maximum_ttl = config['max_ttl']
-        self.experimental_reward = config.get('experimental_reward', False)
 
         fields_in_state = len(TTLAgentSystemState.__slots__)
 
         action_space = RLDict({
-            'should_cache': FloatBox(low=0, high=2, shape=(1,)),
             'ttl': FloatBox(low=0, high=maximum_ttl, shape=(1,)),
-            'eviction': FloatBox(low=0, high=2, shape=(1, ))
+            'eviction': FloatBox(low=0, high=2, shape=(1,))
 
         }, add_batch_rank=True)
 
         self.agent = Agent.from_spec(agent_config,
                                      state_space=FloatBox(shape=(fields_in_state,)),
-                                     action_space=FloatBox(low=0, high=maximum_ttl, shape=(1,)))
+                                     action_space=action_space)
 
         # TODO refactor into common RL interface for all strategies
         self.logger = logging.getLogger(__name__)
@@ -53,7 +54,6 @@ class RLMultiTasksStrategy(TtlStrategy):
 
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
         if key not in self.observed_keys:
-            self.logger.error(f'key: {key} is has not been observed. observation_type:{observation_type.name}')
             return  # haven't had to make a decision on it
 
         current_time = time.time()
@@ -74,7 +74,7 @@ class RLMultiTasksStrategy(TtlStrategy):
             estimated_ttl = stored_agent_action.item()
             real_ttl = current_time - first_observation_time
             stored_state.step_code = observation_type.value
-            stored_state.cache_utility = info['cache_utility']
+            stored_state.cache_utility = self.cache_stats.cache_utility
 
             # log the difference between the estimated ttl and real ttl
             self.ttl_logger.info(f'{observation_type.name},{key},{estimated_ttl},{real_ttl},{stored_state.hit_count}')
@@ -86,13 +86,18 @@ class RLMultiTasksStrategy(TtlStrategy):
             self.logger.info(
                 f'Observation seen so far: {self.observation_seen}, reward so far: {self.cum_reward}')
 
+    def trim_cache(self, cache: Storage):
+        pass
+
+    def should_cache(self, key: str, values: Dict[str, str], ttl: int, operation_type: OperationType) -> bool:
+        pass
+
     def estimate_ttl(self, key: str,
                      values: Dict[str, any],
-                     operation_type: OperationType,
-                     cache_information: CacheInformation) -> float:
+                     operation_type: OperationType) -> float:
         observation_time = time.time()
         encoded_key = self.key_vocab.add_or_get_id(key)
-        cache_utility = cache_information.cache_utility
+        cache_utility = self.cache_stats.cache_utility
 
         state = TTLAgentSystemState(encoded_key=encoded_key,
                                     hit_count=0,

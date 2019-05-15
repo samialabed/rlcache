@@ -5,6 +5,7 @@ import time
 from pandas.tests.extension.numpy_.test_numpy_nested import np
 
 from rlcache.backend import TTLCache, InMemoryStorage
+from rlcache.cache_constants import CacheInformation
 from rlcache.observer import ObservationType
 from rlcache.strategies.eviction_strategies.base_eviction_strategy import EvictionStrategy
 from rlcache.strategies.eviction_strategies.rl_eviction_state import EvictionAgentSystemState, \
@@ -17,8 +18,8 @@ from rlgraph.spaces import FloatBox, IntBox
 
 
 class RLEvictionStrategy(EvictionStrategy):
-    def __init__(self, config: Dict[str, any], results_dir: str):
-        super().__init__(config, results_dir)
+    def __init__(self, config: Dict[str, any], result_dir: str, cache_stats: CacheInformation):
+        super().__init__(config, result_dir, cache_stats)
         # evaluation specific variables
         self.observation_seen = 0
         self.episode_reward = 0

@@ -45,6 +45,9 @@ class CacheInformation(object):
 
     @property
     def cache_utility(self):
+        if self.max_capacity is None:
+            return 1.0  # unbounded, cache utility is maxed
+
         return self.size / self.max_capacity
 
     def __str__(self):
