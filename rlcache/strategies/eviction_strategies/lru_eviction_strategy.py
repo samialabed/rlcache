@@ -1,7 +1,8 @@
 import logging
-import time
 from collections import OrderedDict
 from typing import Dict, List
+
+import time
 
 from rlcache.backend import TTLCache, InMemoryStorage
 from rlcache.cache_constants import CacheInformation

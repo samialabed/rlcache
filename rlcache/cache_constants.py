@@ -50,15 +50,41 @@ class CacheInformation(object):
 
         return self.size / self.max_capacity
 
+    @property
+    def should_cache_ratio(self) -> float:
+        return self.should_cache_true / max((self.should_cache_false + self.should_cache_true), 1)
+
+    @property
+    def hit_ratio(self) -> float:
+        return self.hit / max(self.miss + self.hit, 1)
+
+    def to_log(self) -> str:
+        return "{},{},{},{},{},{},{},{},{}".format(self.invalidate,
+                                                   self.hit,
+                                                   self.miss,
+                                                   self.hit_ratio * 100,
+                                                   self.should_cache_true,
+                                                   self.should_cache_false,
+                                                   self.should_cache_ratio * 100,
+                                                   self.manual_evicts,
+                                                   self.cache_utility)
+
+    def close(self):
+        self.invalidate = 0
+        self.hit = 0
+        self.miss = 0
+        self.manual_evicts = 0
+        self.should_cache_true = 0
+        self.should_cache_false = 0
+
     def __str__(self):
         return json.dumps({"Invalidation": self.invalidate,
                            "Hits": self.hit,
                            "Misses": self.miss,
-                           "Hit rate (%)": (self.hit / (self.miss + self.hit)) * 100,
+                           "Hit rate (%)": self.hit_ratio * 100,
                            "Should cache": self.should_cache_true,
                            "Shouldn't cache": self.should_cache_false,
-                           "Should cache ratio (%)": (self.should_cache_true / (
-                                   self.should_cache_false + self.should_cache_true)) * 100,
+                           "Should cache ratio (%)": self.should_cache_ratio * 100,
                            "Manual Evicts": self.manual_evicts,
                            "Size": self.size,
                            "capacity": self.max_capacity

@@ -1,0 +1,21 @@
+{
+  "experiment_name": "rl_multi_strategy",
+  "cache_backend_settings": {
+    "type": "cache_inmemory",
+    "capacity": 5000
+  },
+  "database_backend_settings": {
+    "type": "inmemory"
+  },
+  "cache_manager_settings": {
+    "multi_strategy_settings": {
+      "max_ttl": 1800,
+      "experimental_reward": true,
+      "checkpoint_steps": 10000,
+      "state_configs": {
+        "value_field_length": 10
+      },
+      "agent_config": "configs/agents/multi_sac.json"
+    }
+  }
+}

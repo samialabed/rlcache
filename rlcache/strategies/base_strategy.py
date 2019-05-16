@@ -7,6 +7,7 @@ from rlcache.observer import Observer
 
 class BaseStrategy(Observer, ABC):
     def __init__(self, config: Dict[str, any], result_dir: str, cache_stats: CacheInformation):
+        super().__init__()
         self.cache_stats = cache_stats
         self.result_dir = result_dir
         self.config = config

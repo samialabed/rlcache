@@ -37,6 +37,9 @@ class TTLCache(object):
         """register hooks that are called upon evictions."""
         self.evict_hook_func.append(hook)
 
+    def is_full(self):
+        return self.memory.is_full()
+    
     def delete(self, key: str):
         if key in self.key_to_expiration_item:
             self.key_to_expiration_item[key].dirty_delete = True
@@ -73,6 +76,11 @@ class TTLCache(object):
             expiration_entry = _ExpirationListEntry(eviction_time=current_time + ttl, key=key, dirty_delete=False)
             self.key_to_expiration_item[key] = expiration_entry
             heapq.heappush(self.expiration_time_list, expiration_entry)
+
+    def update(self, key: str, values: any):
+        """Update without changing the TTL value"""
+        if key in self.memory:
+            self.memory.set(key, values)
 
     def expire(self, cur_time):
         for expiration_entry in self.expiration_time_list:

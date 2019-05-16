@@ -9,6 +9,7 @@ from rlcache.strategies.caching_strategies.simple_strategies import OnReadWriteC
 from rlcache.strategies.eviction_strategies.base_eviction_strategy import EvictionStrategy
 from rlcache.strategies.eviction_strategies.lru_eviction_strategy import LRUEvictionStrategy
 from rlcache.strategies.eviction_strategies.rl_eviction_strategy import RLEvictionStrategy
+from rlcache.strategies.multi_task.rl_multi_task_cache_strategy import RLMultiTasksStrategy
 from rlcache.strategies.ttl_estimation_strategies.base_ttl_strategy import TtlStrategy
 from rlcache.strategies.ttl_estimation_strategies.fixed_ttl_strategy import FixedTtlStrategy
 from rlcache.strategies.ttl_estimation_strategies.rl_ttl_strategy import RLTtlStrategy
@@ -17,9 +18,16 @@ from rlcache.strategies.ttl_estimation_strategies.rl_ttl_strategy import RLTtlSt
 def strategies_from_config(config: Dict[str, any],
                            results_dir: str,
                            cache_stats: CacheInformation) -> [CachingStrategy, EvictionStrategy, TtlStrategy]:
-    caching_strategy = caching_strategy_from_config(config['caching_strategy_settings'], results_dir, cache_stats)
-    eviction_strategy = eviction_strategy_from_config(config['eviction_strategy_settings'], results_dir, cache_stats)
-    ttl_strategy = ttl_strategy_from_config(config['ttl_strategy_settings'], results_dir, cache_stats)
+    if 'multi_strategy_settings' in config:
+        caching_strategy = eviction_strategy = ttl_strategy = multi_from_config(config['multi_strategy_settings'],
+                                                                                results_dir,
+                                                                                cache_stats)
+
+    else:
+        caching_strategy = caching_strategy_from_config(config['caching_strategy_settings'], results_dir, cache_stats)
+        eviction_strategy = eviction_strategy_from_config(config['eviction_strategy_settings'], results_dir,
+                                                          cache_stats)
+        ttl_strategy = ttl_strategy_from_config(config['ttl_strategy_settings'], results_dir, cache_stats)
 
     return [caching_strategy, eviction_strategy, ttl_strategy]
 
@@ -93,3 +101,18 @@ def ttl_strategy_from_config(config: Dict[str, any], results_dir: str, cache_sta
         return RLTtlStrategy(config, results_dir, cache_stats)
     else:
         raise NotImplementedError("Type passed isn't one of the supported types: {}".format(_supported_type))
+
+
+def multi_from_config(config: Dict[str, any], results_dir: str, cache_stats: CacheInformation) -> RLMultiTasksStrategy:
+    # load the agent config file into the dict
+    results_dir += '/multi_strategy/'
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+
+    with open(config['agent_config'], 'r') as fp:
+        agent_config = json.load(fp)
+        config['agent_config'] = agent_config
+    # copy agent config to result directory for reproducibility
+    with open(f'{results_dir}/agent_config.json', 'w') as outfile:
+        json.dump(agent_config, outfile, indent=2)
+    return RLMultiTasksStrategy(config, results_dir, cache_stats)

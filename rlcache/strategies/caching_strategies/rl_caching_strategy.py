@@ -125,9 +125,5 @@ class RLCachingStrategy(CachingStrategy):
 
     def close(self):
         super().close()
-        experiences_items = self._incomplete_experiences.items()
-        for (k, v) in experiences_items:
-            self._reward_experience(k, v, ObservationType.EndOfEpisode)
-
         self.agent.reset()
         self._incomplete_experiences.clear()

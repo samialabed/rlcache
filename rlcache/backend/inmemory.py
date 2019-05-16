@@ -19,13 +19,16 @@ class InMemoryStorage(Storage):
 
     def items(self):
         return self.memory.items()
-    
+
     def delete(self, key):
         if key in self.memory:
             del self.memory[key]
 
     def clear(self):
         self.memory.clear()
+
+    def keys(self):
+        return self.memory.keys()
 
     def size(self):
         return len(self.memory)
