@@ -2,7 +2,7 @@
   "experiment_name": "simple_strategy",
   "cache_backend_settings": {
     "type": "cache_inmemory",
-    "capacity": 100
+    "capacity": 1000
   },
   "database_backend_settings": {
     "type": "inmemory"

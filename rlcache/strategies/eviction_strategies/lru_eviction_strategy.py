@@ -16,7 +16,6 @@ class LRUEvictionStrategy(EvictionStrategy):
         super().__init__(config, result_dir, cache_stats)
         self.lru = OrderedDict()
         self.logger = logging.getLogger(__name__)
-        self.renewable_ops = {ObservationType.Hit, ObservationType.Write}
         name = 'lru_eviction_strategy'
         self.performance_logger = create_file_logger(name=f'{name}_performance_logger', result_dir=result_dir)
 
@@ -36,7 +35,7 @@ class LRUEvictionStrategy(EvictionStrategy):
             observation_time = time.time()
             self.lru[key] = {'ttl': ttl, 'observation_time': observation_time}
 
-        elif observation_type in self.renewable_ops:
+        elif observation_type == ObservationType.Hit:
             if stored_values is not None:
                 observation_time = time.time()
                 self.lru[key] = {'ttl': stored_values['ttl'], 'observation_time': observation_time}
@@ -59,12 +58,15 @@ class LRUEvictionStrategy(EvictionStrategy):
         self.performance_logger.info(f'{self.episode_num},TrueEvict')
 
     def trim_cache(self, cache: TTLCache) -> List[str]:
-        eviction_item = self.lru.popitem(last=False)
-        eviction_key = eviction_item[0]
-        eviction_value = eviction_item[1]
-        assert cache.contains(eviction_key), "Key: {} is in LRU but not in cache.".format(eviction_key)
-        decision_time = time.time()
-        ttl_left = (eviction_value['observation_time'] + eviction_value['ttl']) - decision_time
-        self._incomplete_experiences.set(eviction_key, 'evict', ttl_left)
-        cache.delete(eviction_key)
-        return [eviction_key]
+        while True:
+            eviction_item = self.lru.popitem(last=False)
+            eviction_key = eviction_item[0]
+            eviction_value = eviction_item[1]
+
+            if cache.contains(eviction_key):
+                # TTLCache might expire and cause a race condition
+                decision_time = time.time()
+                ttl_left = (eviction_value['observation_time'] + eviction_value['ttl']) - decision_time
+                self._incomplete_experiences.set(eviction_key, 'evict', ttl_left)
+                cache.delete(eviction_key)
+                return [eviction_key]

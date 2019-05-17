@@ -1,7 +1,10 @@
 import logging
+import time
 from typing import Dict
 
-import time
+from rlgraph.agents import Agent
+from rlgraph.spaces import Dict as RLDict
+from rlgraph.spaces import FloatBox
 
 from rlcache.backend import InMemoryStorage, TTLCache
 from rlcache.backend.base import Storage
@@ -12,9 +15,6 @@ from rlcache.strategies.multi_task.rl_multi_task_cache_strategy_state import Mul
     MultiTaskAgentObservedExperience
 from rlcache.utils.loggers import create_file_logger
 from rlcache.utils.vocabulary import Vocabulary
-from rlgraph.agents import Agent
-from rlgraph.spaces import Dict as RLDict
-from rlgraph.spaces import FloatBox
 
 
 class RLMultiTasksStrategy(BaseStrategy):
@@ -80,9 +80,8 @@ class RLMultiTasksStrategy(BaseStrategy):
             # log the difference between the estimated ttl and real ttl
             self.ttl_logger.info(
                 f'{self.episode_num},{observation_type.name},{key},{estimated_ttl},{real_ttl},{stored_state.hit_count}')
-
-        self.reward_agent(observation_type, observed_experience)
-        self._incomplete_experiences.delete(key)
+            self.reward_agent(observation_type, observed_experience)
+            self._incomplete_experiences.delete(key)
 
         self.observation_seen += 1
         if self.observation_seen % self.checkpoint_steps == 0:
@@ -110,7 +109,7 @@ class RLMultiTasksStrategy(BaseStrategy):
 
     def should_cache(self, key: str, values: Dict[str, str], ttl: int, operation_type: OperationType) -> bool:
         # cache objects that have TTL more than 1 second (maybe make this configurable?)
-        return ttl > 1
+        return ttl > 2
 
     def estimate_ttl(self, key: str, values: Dict[str, any], operation_type: OperationType) -> float:
         observation_time = time.time()
@@ -140,22 +139,18 @@ class RLMultiTasksStrategy(BaseStrategy):
         # reward more utilisation of the cache capacity given more hits
         final_state = experience.state
 
-        if observation_type == ObservationType.Hit:
-            reward = 1
-            terminal = False
-        elif observation_type == ObservationType.Expiration:
-            reward = 0
-            terminal = True
-        else:
-            reward = -1
-            terminal = True
+        reward = experience.state.hit_count
+        if observation_type == observation_type.Invalidate:
+            reward -= 10
+        elif observation_type == observation_type.Expiration:
+            reward += 10
 
         self.agent.observe(preprocessed_states=experience.starting_state.to_numpy(),
                            actions=experience.agent_action,
                            internals=[],
                            rewards=reward,
                            next_states=final_state.to_numpy(),
-                           terminals=terminal)
+                           terminals=True)
 
         self.cum_reward += reward
         self.reward_logger.info(f'{self.episode_num},{reward}')
@@ -170,8 +165,9 @@ class RLMultiTasksStrategy(BaseStrategy):
         """Observe decisions taken that hasn't been observed by main cache. e.g. don't cache -> ttl up -> no miss"""
         self.observation_logger.info(f'{self.episode_num},{key},{observation_type}')
         experience = info['value']  # type: MultiTaskAgentObservedExperience
-        self.ttl_logger.info(f'{self.episode_num},{observation_type.name},{key},{experience.agent_action.item()},'
-                             f'{experience.agent_action.item()},{experience.state.hit_count}')
+        self.ttl_logger.info(
+            f'{self.episode_num},{observation_type.name},{key},{experience.agent_action["ttl"].item()},'
+            f'{experience.agent_action["ttl"].item()},{experience.state.hit_count}')
         experience.state.step_code = observation_type.value
 
         self.reward_agent(observation_type, experience)
