@@ -15,7 +15,7 @@
       "activation": "relu",
       "scope": "hidden1"
     },
-        {
+    {
       "type": "dense",
       "units": 64,
       "activation": "relu",
@@ -48,6 +48,11 @@
       "scope": "vf-hidden3"
     }
   ],
+  "execution_spec": {
+    "gpu_spec": {
+      "gpus_enabled": true
+    }
+  },
   "update_spec": {
     "do_updates": true,
     "update_interval": 4,

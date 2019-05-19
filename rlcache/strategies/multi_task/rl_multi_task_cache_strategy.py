@@ -1,13 +1,12 @@
 import logging
-import time
 from typing import Dict
 
+import time
 from rlgraph.agents import Agent
 from rlgraph.spaces import Dict as RLDict
 from rlgraph.spaces import FloatBox
 
 from rlcache.backend import InMemoryStorage, TTLCache
-from rlcache.backend.base import Storage
 from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observer import ObservationType
 from rlcache.strategies.base_strategy import BaseStrategy
@@ -90,13 +89,12 @@ class RLMultiTasksStrategy(BaseStrategy):
         if observation_type not in self.non_terminal_observations:
             self.observation_logger.info(f'{key},{observation_type}')
 
-    def trim_cache(self, cache: Storage):
+    def trim_cache(self, cache: TTLCache):
         # trim cache isn't called often so the operation is ok to be expensive
         # produce an action on the whole cache
         keys_to_evict = []
 
-        for key in list(cache.keys()):
-            stored_experience = self._incomplete_experiences.get(key)  # type: MultiTaskAgentObservedExperience
+        for (key, stored_experience) in list(self._incomplete_experiences.items()):
             action = self.agent.get_action(stored_experience.state.to_numpy())['eviction']
             evict = action.item() > 0.5
             if evict:

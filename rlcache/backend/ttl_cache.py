@@ -39,11 +39,14 @@ class TTLCache(object):
 
     def is_full(self):
         return self.memory.is_full()
-    
+
     def delete(self, key: str):
         if key in self.key_to_expiration_item:
             self.key_to_expiration_item[key].dirty_delete = True
         self.memory.delete(key)
+
+    def keys(self):
+        return self.memory.keys()
 
     def size(self) -> int:
         return self.memory.size()

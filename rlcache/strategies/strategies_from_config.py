@@ -7,6 +7,7 @@ from rlcache.strategies.caching_strategies.base_caching_strategy import CachingS
 from rlcache.strategies.caching_strategies.rl_caching_strategy import RLCachingStrategy
 from rlcache.strategies.caching_strategies.simple_strategies import OnReadWriteCacheStrategy, OnReadOnlyCacheStrategy
 from rlcache.strategies.eviction_strategies.base_eviction_strategy import EvictionStrategy
+from rlcache.strategies.eviction_strategies.fifo_eviction_strategy import FIFOEvictionStrategy
 from rlcache.strategies.eviction_strategies.lru_eviction_strategy import LRUEvictionStrategy
 from rlcache.strategies.eviction_strategies.rl_eviction_strategy import RLEvictionStrategy
 from rlcache.strategies.multi_task.rl_multi_task_cache_strategy import RLMultiTasksStrategy
@@ -69,6 +70,8 @@ def eviction_strategy_from_config(config: Dict[str, any],
     eviction_strategy_type = config['type']
     if eviction_strategy_type == "lru":
         return LRUEvictionStrategy(config, results_dir, cache_stats)
+    elif eviction_strategy_type == "fifo":
+        return FIFOEvictionStrategy(config, results_dir, cache_stats)
     elif eviction_strategy_type == 'rl_driven':
         # load the agent config file into the dict
         with open(config['agent_config'], 'r') as fp:

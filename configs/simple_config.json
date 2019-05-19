@@ -1,5 +1,5 @@
 {
-  "experiment_name": "simple_strategy",
+  "experiment_name": "simple_strategy_fifo",
   "cache_backend_settings": {
     "type": "cache_inmemory",
     "capacity": 1000
@@ -17,7 +17,7 @@
       "ttl": 60
     },
     "eviction_strategy_settings": {
-      "type": "lru"
+      "type": "fifo"
     }
   }
 }
