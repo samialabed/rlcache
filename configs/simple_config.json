@@ -2,7 +2,7 @@
   "experiment_name": "simple_strategy_fifo",
   "cache_backend_settings": {
     "type": "cache_inmemory",
-    "capacity": 1000
+    "capacity": 2500
   },
   "database_backend_settings": {
     "type": "inmemory"

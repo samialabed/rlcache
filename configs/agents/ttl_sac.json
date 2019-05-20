@@ -23,6 +23,12 @@
       "units": 64,
       "activation": "relu",
       "scope": "hidden2"
+    },
+    {
+      "type": "dense",
+      "units": 64,
+      "activation": "relu",
+      "scope": "hidden3"
     }
   ],
   "value_function_spec": [
@@ -37,6 +43,12 @@
       "units": 64,
       "activation": "relu",
       "scope": "vf-hidden2"
+    },
+    {
+      "type": "dense",
+      "units": 64,
+      "activation": "relu",
+      "scope": "vf-hidden3"
     }
   ],
   "update_spec": {

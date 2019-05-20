@@ -2,6 +2,8 @@ import logging
 from typing import Dict
 
 import time
+from rlgraph.agents import Agent
+from rlgraph.spaces import FloatBox
 
 from rlcache.backend import TTLCache, InMemoryStorage
 from rlcache.cache_constants import OperationType, CacheInformation
@@ -11,8 +13,6 @@ from rlcache.strategies.ttl_estimation_strategies.rl_ttl_state import TTLAgentOb
     TTLAgentSystemState
 from rlcache.utils.loggers import create_file_logger
 from rlcache.utils.vocabulary import Vocabulary
-from rlgraph.agents import Agent
-from rlgraph.spaces import FloatBox
 
 
 class RLTtlStrategy(TtlStrategy):
@@ -72,29 +72,27 @@ class RLTtlStrategy(TtlStrategy):
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
         observed_experience = self._incomplete_experiences.get(key)
 
-        if observed_experience is None:
+        if observed_experience is None or observation_type == ObservationType.Expiration:
             return  # haven't had to make a decision on it
 
         current_time = time.time()
         stored_state = observed_experience.state
         if observation_type == ObservationType.Hit:
             stored_state.hit_count += 1
+        # elif observation_type in self.non_terminal_observations:
+        #     # it was evicted by another policy don't attempt to learn stuff from this
+        #     pass
 
-        elif observation_type in self.non_terminal_observations:
-            # it was evicted by another policy don't attempt to learn stuff from this
-            pass
+        estimated_ttl = observed_experience.agent_action.item()
+        first_observation_time = observed_experience.observation_time
+        real_ttl = current_time - first_observation_time
+        stored_state.step_code = observation_type.value
+        stored_state.cache_utility = self.cache_stats.cache_utility
+        self.reward_agent(observation_type, observed_experience, real_ttl)
 
-        else:
-            # Include eviction, invalidation, and miss
-            estimated_ttl = observed_experience.agent_action.item()
-            first_observation_time = observed_experience.observation_time
-            real_ttl = current_time - first_observation_time
-            stored_state.step_code = observation_type.value
-            stored_state.cache_utility = self.cache_stats.cache_utility
-
-            # log the difference between the estimated ttl and real ttl
-            self.ttl_logger.info(f'{self.episode_num},{observation_type.name},{key},{estimated_ttl},{real_ttl},{stored_state.hit_count}')
-            self.reward_agent(observation_type, observed_experience, real_ttl)
+        if observation_type != ObservationType.Hit:
+            self.ttl_logger.info(
+                f'{self.episode_num},{observation_type.name},{key},{estimated_ttl},{real_ttl},{stored_state.hit_count}')
             self._incomplete_experiences.delete(key)
 
         self.observation_seen += 1
@@ -120,14 +118,15 @@ class RLTtlStrategy(TtlStrategy):
         # reward more utilisation of the cache capacity given more hits
         final_state = experience.state
 
-        difference_in_ttl = (min(real_ttl, self.maximum_ttl) - experience.agent_action.item())
+        difference_in_ttl = -abs((experience.agent_action.item() + 1) / min(real_ttl, self.maximum_ttl))
+        # reward = final_state.hit_count - abs(difference_in_ttl * self.cache_stats.cache_utility)
 
-        if self.experimental_reward:
-            reward = final_state.hit_count - abs(difference_in_ttl * self.cache_stats.cache_utility)
+        if observation_type == ObservationType.Hit:
+            reward = 1
+        elif observation_type == ObservationType.EvictionPolicy:
+            reward = 0
         else:
-            reward = (final_state.hit_count + 1)
-            if observation_type not in self.non_terminal_observations:
-                reward = reward / (difference_in_ttl+1)
+            reward = difference_in_ttl
 
         self.logger.debug(f'Hits: {final_state.hit_count}, ttl diff: {difference_in_ttl}, Reward: {reward}')
 
