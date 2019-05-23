@@ -113,3 +113,4 @@ venv.bak/
 /ycsb/ycsb*
 
 documented_results/
+rlcache-results/
