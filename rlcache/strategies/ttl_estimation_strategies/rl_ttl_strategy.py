@@ -43,6 +43,7 @@ class RLTtlStrategy(TtlStrategy):
         self.ttl_logger = create_file_logger(name=f'{name}_ttl_logger', result_dir=self.result_dir)
         self.observation_logger = create_file_logger(name=f'{name}_observation_logger', result_dir=self.result_dir)
         self.key_vocab = Vocabulary()
+        self.errors = create_file_logger(name=f'{name}_error_logger', result_dir=self.result_dir)
 
     def estimate_ttl(self, key: str,
                      values: Dict[str, any],
@@ -156,5 +157,8 @@ class RLTtlStrategy(TtlStrategy):
                                  f'{v.agent_action.item()},{v.state.hit_count}')
 
         self._incomplete_experiences.clear()
-        self.agent.reset()
-        self.agent.reset_env_buffers()
+        try:
+            self.agent.reset()
+            self.agent.reset_env_buffers()
+        except Exception as e:
+            self.errors.info(e)

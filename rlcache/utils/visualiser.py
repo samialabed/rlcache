@@ -173,7 +173,7 @@ def calculate_hitrate(directory: str, q95=False) -> Tuple[pd.Series, pd.Series]:
 
 
 def plot_eviction_precision(directory: str, eviction_name: str):
-    eviction_performance_df = pd.read_csv(f'{directory}/eviction_strategy/{eviction_name}performance_logger.log',
+    eviction_performance_df = pd.read_csv(f'{directory}/eviction_strategy/{eviction_name}_performance_logger.log',
                                           names=['timestamp', 'episode', 'state'])
     eviction_performance = eviction_performance_df.groupby(['episode', 'state']).count().unstack(0)['timestamp'].fillna(
         0).transpose()

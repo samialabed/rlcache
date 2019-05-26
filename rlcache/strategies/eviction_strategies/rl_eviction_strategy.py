@@ -120,7 +120,7 @@ class RLEvictionStrategy(EvictionStrategy):
 
         elif observation_type in self._end_episode_observation:
             if stored_experience:
-                reward = self.converter.system_to_agent_reward(stored_experience, observation_type)
+                reward = self.converter.system_to_agent_reward(stored_experience, observation_type, self.episode_num)
                 state = stored_experience.state
                 action = stored_experience.agent_action
                 new_state = state.copy()
@@ -142,7 +142,7 @@ class RLEvictionStrategy(EvictionStrategy):
         self.observation_logger.info(f'{self.episode_num},{key},{observation_type}')
 
         experience = info['value']  # type: EvictionAgentIncompleteExperienceEntry
-        reward = self.converter.system_to_agent_reward(experience, observation_type)
+        reward = self.converter.system_to_agent_reward(experience, observation_type, self.episode_num)
         starting_state = experience.starting_state
         action = experience.agent_action
         new_state = experience.state.copy()

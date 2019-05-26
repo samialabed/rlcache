@@ -27,7 +27,8 @@ class EvictionStrategyRLConverter(RLConverter):
 
     def system_to_agent_reward(self,
                                stored_experience: EvictionAgentIncompleteExperienceEntry,
-                               observation_type: ObservationType) -> int:
+                               observation_type: ObservationType,
+                               episode_num: int) -> int:
         # TODO consider using the hit count as scalar?
 
         should_evict = self.agent_to_system_action(stored_experience.agent_action)
@@ -35,7 +36,7 @@ class EvictionStrategyRLConverter(RLConverter):
         if observation_type == ObservationType.Expiration:
             if should_evict:
                 # reward if should evict didn't observe any follow up miss
-                self.performance_logger.info('TrueEvict')
+                self.performance_logger.info(f'{episode_num},TrueEvict')
                 return 1
             # else didn't evict
             else:
@@ -44,9 +45,9 @@ class EvictionStrategyRLConverter(RLConverter):
 
                 gain_for_not_evicting = stored_experience.state.hit_count - stored_experience.starting_state.hit_count
                 if gain_for_not_evicting > 0:
-                    self.performance_logger.info('TrueMiss')
+                    self.performance_logger.info(f'{episode_num},TrueMiss')
                 else:
-                    self.performance_logger.info('MissEvict')
+                    self.performance_logger.info(f'{episode_num},MissEvict')
 
                 return gain_for_not_evicting
 
@@ -54,17 +55,17 @@ class EvictionStrategyRLConverter(RLConverter):
             # Set/Delete, remove entry from the cache.
             # reward an eviction followed by invalidation.
             if should_evict:
-                self.performance_logger.info('TrueEvict')
+                self.performance_logger.info(f'{episode_num},TrueEvict')
                 return 1
             else:
                 # punish not evicting a key that got invalidated after.
-                self.performance_logger.info('MissEvict')
+                self.performance_logger.info(f'{episode_num},MissEvict')
                 return -1
 
         if observation_type == ObservationType.Miss:
             assert should_evict, 'Observation miss even without making an eviction nor expire decision'
 
-            self.performance_logger.info('FalseEvict')
+            self.performance_logger.info(f'{episode_num},FalseEvict')
             # Miss after making an eviction decision
             # Punish, a read after an eviction decision
             return -1
