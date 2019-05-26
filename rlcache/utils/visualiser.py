@@ -3,6 +3,7 @@ from typing import List, Tuple, Dict
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import time
 
 caching_strategy_dir = 'caching_strategy'
 eviction_strategy_dir = 'eviction_strategy'
@@ -45,6 +46,34 @@ def save_everything_hit_rate(directory: str, methods: List, output: str, overwri
         # TODO make it save to location
 
 
+def save_everything_cache_rate(directory: str, methods: List, output: str, overwrite_cols: Dict[str, str]):
+    capacities = [100, 1000, 2500, 5000]
+    # capacities = [100]
+    for capacity in capacities:
+        means, errors = calculate_cache_rate_with_varying_methods(directory, methods, capacity)
+        means.rename(columns=overwrite_cols, inplace=True)
+        errors.rename(columns=overwrite_cols, inplace=True)
+        means.rename(columns=overwrite_cols, inplace=True)
+        errors.rename(columns=overwrite_cols, inplace=True)
+        ax = means.plot.bar(yerr=errors)
+        ax.set_xlabel('Write Ratio (%)')
+        ax.set_ylabel('Cache Ratio')
+        ax.set_title(f'Cache Capacity {capacity}')
+        fig = ax.get_figure()
+        fig.savefig(f'{output}/cache_rate_{capacity}.pdf')
+
+
+def calculate_cache_rate_with_varying_methods(directory: str, methods: List, capacity: int):
+    res_df = pd.DataFrame()
+    errs_df = pd.DataFrame()
+
+    for method in methods:
+        res_df[f'{method}'], errs_df[f'{method}'] = calculate_cache_rate(
+            f'{directory}/{method}/cache_capacity_{capacity}')
+
+    return res_df, errs_df
+
+
 def calculate_hitrate_with_varying_methods(directory: str, methods: List, capacity: int):
     res_df = pd.DataFrame()
     errs_df = pd.DataFrame()
@@ -67,7 +96,58 @@ def calculate_hitrate_on_varying_capacity(directory: str,
     return res
 
 
-def calculate_hitrate(directory: str) -> Tuple[pd.Series, pd.Series]:
+def calculate_cache_rate(directory: str):
+    TIME_OF_FIX_IMPLEMENTATION = '2019_05_24_13_32'
+
+    sub_dirs = os.listdir(directory)
+    write_ratio_df = pd.DataFrame({'write_ratio': [0, 5, 10, 25, 50, 100]})
+    write_ratio_df = write_ratio_df.set_index('write_ratio')
+
+    for sub_dir in sub_dirs:
+        end_of_episode_stats_df = pd.read_csv(f'{directory}/{sub_dir}/end_of_episode_logger.log',
+                                              names=['timestamp', 'episode_num',
+                                                     'invalidate', 'hit',
+                                                     'miss', 'hit_ratio',
+                                                     'should_cache',
+                                                     'should_not_cache',
+                                                     'should_cache_ratio',
+                                                     'manual_evicts',
+                                                     'cache_utility'])
+        if time.strptime(sub_dir, '%Y_%m_%d_%H_%M') < time.strptime(TIME_OF_FIX_IMPLEMENTATION, '%Y_%m_%d_%H_%M'):
+            end_of_episode_stats_df = fix_old_bug_in_cal_cache_rate(end_of_episode_stats_df)
+        cache_rate = end_of_episode_stats_df['should_cache_ratio'].drop(0)
+        cache_rate.index = write_ratio_df.index
+        write_ratio_df[sub_dir] = cache_rate
+
+    means = write_ratio_df.mean(axis=1)
+    errors = write_ratio_df.std(axis=1)
+    return means, errors
+
+
+def fix_old_bug_in_cal_cache_rate(end_of_episode_stats_df):
+    df_should_cache = end_of_episode_stats_df['should_cache']
+    df_should_not_cache = end_of_episode_stats_df['should_not_cache']
+    df_should_cache_ratio = end_of_episode_stats_df['should_cache_ratio']
+    df_cache_hit = end_of_episode_stats_df['hit']
+    df_cache_miss = end_of_episode_stats_df['miss']
+    df_cache_hit_ratio = end_of_episode_stats_df['hit_ratio']
+    df_invalidate = end_of_episode_stats_df['invalidate']
+    df_manual_evicts = end_of_episode_stats_df['manual_evicts']
+    for i in range(6, 1, -1):
+        df_should_cache[i] = (df_should_cache[i] - df_should_cache[i - 1]).item()
+        df_should_not_cache[i] = (df_should_not_cache[i] - df_should_not_cache[i - 1]).item()
+        df_should_cache_ratio[i] = (df_should_cache[i] / max(df_should_not_cache[i] + df_should_cache[i],
+                                                             1)).item() * 100
+        df_cache_hit[i] = (df_cache_hit[i] - df_cache_hit[i - 1]).item()
+        df_cache_miss[i] = (df_cache_miss[i] - df_cache_miss[i - 1]).item()
+        df_cache_hit_ratio[i] = (df_cache_hit[i] / max(df_cache_miss[i] + df_cache_hit[i], 1)).item() * 100
+        df_invalidate[i] = (df_invalidate[i] - df_invalidate[i - 1]).item()
+        df_manual_evicts[i] = (df_manual_evicts[i] - df_manual_evicts[i - 1]).item()
+
+    return end_of_episode_stats_df
+
+
+def calculate_hitrate(directory: str, q95=False) -> Tuple[pd.Series, pd.Series]:
     sub_dirs = os.listdir(directory)
     write_ratio_df = pd.DataFrame({'write_ratio': [0, 5, 10, 25, 50, 100]})
     write_ratio_df = write_ratio_df.set_index('write_ratio')
@@ -76,8 +156,14 @@ def calculate_hitrate(directory: str) -> Tuple[pd.Series, pd.Series]:
         stats_df = pd.read_csv(f'{directory}/{sub_dir}/evaluation_logger.log',
                                names=['timestamp', 'key', 'observation', 'episode'],
                                usecols=['episode', 'observation', 'key'])
-        stats = stats_df.groupby(['episode', 'observation']).count().unstack(0)['key'].fillna(0).transpose()
-        hit_ratio_all = stats['Hit'] / stats.sum(axis=1)
+        if q95:
+            stats = stats_df.groupby(['episode', 'observation', (stats_df.index // 10000)]).count().unstack(0)[
+                'key'].fillna(0).transpose()
+            hit_ratio_all = (stats['Hit'] / 10000).quantile(0.95, axis=1)
+        else:
+            stats = stats_df.groupby(['episode', 'observation']).count().unstack(0)['key'].fillna(0).transpose()
+            hit_ratio_all = stats['Hit'] / stats.sum(axis=1)
+
         hit_ratio_all.index = write_ratio_df.index
         write_ratio_df[sub_dir] = hit_ratio_all
 

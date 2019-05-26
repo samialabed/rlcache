@@ -3,7 +3,7 @@
   "type": "dqn",
   "memory_spec": {
     "type": "prioritized_replay",
-    "capacity": 500
+    "capacity": 1000
   },
   "policy_spec": {
   },
@@ -38,9 +38,9 @@
       "decay_spec": {
         "type": "linear_decay",
         "from": 1.0,
-        "to": 0.1,
+        "to": 0.2,
         "start_timestep": 0,
-        "num_timesteps": 500000
+        "num_timesteps": 50000
       }
     }
   }

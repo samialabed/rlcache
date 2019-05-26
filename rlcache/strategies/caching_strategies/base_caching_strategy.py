@@ -13,7 +13,9 @@ class CachingStrategy(BaseStrategy, ABC):
                                        ObservationType.Miss,
                                        ObservationType.Invalidate,
                                        ObservationType.Expiration,
-                                       ObservationType.EvictionPolicy}
+                                       ObservationType.EvictionPolicy,
+                                       ObservationType.SetNotInCache,
+                                       ObservationType.DeleteNotInCache}
 
     def should_cache(self, key: str, values: Dict[str, str], ttl: int, operation_type: OperationType) -> bool:
         raise NotImplementedError

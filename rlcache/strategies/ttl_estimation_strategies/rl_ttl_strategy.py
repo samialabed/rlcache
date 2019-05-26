@@ -123,10 +123,13 @@ class RLTtlStrategy(TtlStrategy):
 
         if observation_type == ObservationType.Hit:
             reward = 1
+            terminal = False
         elif observation_type == ObservationType.EvictionPolicy:
             reward = 0
+            terminal = True
         else:
             reward = difference_in_ttl
+            terminal = True
 
         self.logger.debug(f'Hits: {final_state.hit_count}, ttl diff: {difference_in_ttl}, Reward: {reward}')
 
@@ -135,7 +138,7 @@ class RLTtlStrategy(TtlStrategy):
                            internals=[],
                            rewards=reward,
                            next_states=final_state.to_numpy(),
-                           terminals=False)
+                           terminals=terminal)
 
         self.cum_reward += reward
         self.reward_logger.info(f'{self.episode_num},{reward}')
@@ -148,9 +151,10 @@ class RLTtlStrategy(TtlStrategy):
 
     def close(self):
         super().close()
-        for (k, v) in self._incomplete_experiences.items():
+        for (k, v) in list(self._incomplete_experiences.items()):
             self.ttl_logger.info(f'{self.episode_num},{ObservationType.EndOfEpisode.name},{k},{v.agent_action.item()},'
                                  f'{v.agent_action.item()},{v.state.hit_count}')
 
         self._incomplete_experiences.clear()
         self.agent.reset()
+        self.agent.reset_env_buffers()

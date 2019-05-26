@@ -13,7 +13,10 @@ class TtlStrategy(BaseStrategy, ABC):
                                        ObservationType.Miss,
                                        ObservationType.Invalidate,
                                        ObservationType.Expiration,
-                                       ObservationType.EvictionPolicy}
+                                       ObservationType.EvictionPolicy,
+                                       ObservationType.SetNotInCache,
+                                       ObservationType.DeleteNotInCache
+                                       }
 
     def estimate_ttl(self, key: str,
                      values: Dict[str, any],

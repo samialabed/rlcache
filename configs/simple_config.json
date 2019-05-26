@@ -1,8 +1,8 @@
 {
-  "experiment_name": "simple_strategy_fifo",
+  "experiment_name": "simple_strategy_read_only",
   "cache_backend_settings": {
     "type": "cache_inmemory",
-    "capacity": 2500
+    "capacity": 5000
   },
   "database_backend_settings": {
     "type": "inmemory"
@@ -10,14 +10,14 @@
   "cache_manager_settings": {
     "experiment_name": "Fixed simple strategy",
     "caching_strategy_settings": {
-      "type": "read_write"
+      "type": "read_only"
     },
     "ttl_strategy_settings": {
       "type": "fixed",
       "ttl": 60
     },
     "eviction_strategy_settings": {
-      "type": "fifo"
+      "type": "lru"
     }
   }
 }

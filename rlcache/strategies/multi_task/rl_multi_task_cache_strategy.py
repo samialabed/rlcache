@@ -174,3 +174,4 @@ class RLMultiTasksStrategy(BaseStrategy):
         super().close()
         self._incomplete_experiences.clear()
         self.agent.reset()
+        self.agent.reset_env_buffers()

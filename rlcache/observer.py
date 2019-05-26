@@ -40,9 +40,9 @@ class ObserversOrchestrator(object):
             self.evaluation_logger.info(f'{key},{observation_type.name},{self.episode_num}')
 
         for observer in self.observers:
-            if observation_type in {ObservationType.SetNotInCache, ObservationType.DeleteNotInCache}:
-                # TODO refactor the strategies to handle this
-                observation_type = ObservationType.Invalidate
+            # if observation_type in {ObservationType.SetNotInCache, ObservationType.DeleteNotInCache}:
+            #     # TODO refactor the strategies to handle this
+            #     observation_type = ObservationType.Invalidate
 
             if observation_type in observer.supported_observations:
                 observer.observe(key=key, observation_type=observation_type, info=info)

@@ -1,8 +1,8 @@
 {
-  "experiment_name": "rl_caching_strategy",
+  "experiment_name": "random_caching",
   "cache_backend_settings": {
     "type": "cache_inmemory",
-    "capacity": 5000
+    "capacity": 100
   },
   "database_backend_settings": {
     "type": "inmemory"
@@ -14,7 +14,7 @@
       "state_configs": {
         "value_field_length": 10
       },
-      "agent_config": "configs/agents/caching_dqn.json"
+      "agent_config": "configs/agents/random_agent.json"
     },
     "ttl_strategy_settings": {
       "type": "fixed",
