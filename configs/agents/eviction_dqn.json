@@ -10,13 +10,13 @@
   "network_spec": [
     {
       "type": "dense",
-      "units": 64,
+      "units": 128,
       "activation": "relu",
       "scope": "hidden1"
     },
     {
       "type": "dense",
-      "units": 64,
+      "units": 128,
       "activation": "relu",
       "scope": "hidden2"
     }

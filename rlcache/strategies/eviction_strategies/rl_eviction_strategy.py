@@ -55,35 +55,26 @@ class RLEvictionStrategy(EvictionStrategy):
         keys_to_evict = []
         keys_to_not_evict = []
 
-        while True:
-            for (key, cached_key) in self.view_of_the_cache.items():
-                agent_system_state = cached_key['state']
+        for (key, cached_key) in self.view_of_the_cache.items():
+            agent_system_state = cached_key['state']
 
-                agent_action = self.agent.get_action(agent_system_state.to_numpy())
-                should_evict = self.converter.agent_to_system_action(agent_action)
+            agent_action = self.agent.get_action(agent_system_state.to_numpy())
+            should_evict = self.converter.agent_to_system_action(agent_action)
 
-                decision_time = time.time()
-                incomplete_experience = EvictionAgentIncompleteExperienceEntry(agent_system_state,
-                                                                               agent_action,
-                                                                               agent_system_state.copy(),
-                                                                               decision_time)
+            decision_time = time.time()
+            incomplete_experience = EvictionAgentIncompleteExperienceEntry(agent_system_state,
+                                                                           agent_action,
+                                                                           agent_system_state.copy(),
+                                                                           decision_time)
 
-                # observe the key for only the ttl period that is left for this key
-                ttl_left = (cached_key['observation_time'] + agent_system_state.ttl) - decision_time
-                self._incomplete_experiences.set(key=key, values=incomplete_experience, ttl=ttl_left)
+            # observe the key for only the ttl period that is left for this key
+            ttl_left = (cached_key['observation_time'] + agent_system_state.ttl) - decision_time
+            self._incomplete_experiences.set(key=key, values=incomplete_experience, ttl=ttl_left)
 
-                if should_evict:
-                    keys_to_evict.append(key)
-                else:
-                    keys_to_not_evict.append(key)
-            if len(keys_to_evict) > 0:
-                break
+            if should_evict:
+                keys_to_evict.append(key)
             else:
-                # didn't make any eviction decisions, remove observed stuff from memory and try again.
-                # this won't happen when the cache is large enough.
-                for key in keys_to_not_evict:
-                    self._incomplete_experiences.delete(key)
-                self.logger.error('No keys were chosen to be evicted. Retrying.')
+                keys_to_not_evict.append(key)
 
         for key in keys_to_evict:
             # race condition: while in this loop a key expires and hit the observer pattern
