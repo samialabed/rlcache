@@ -125,14 +125,15 @@ class RLTtlStrategy(TtlStrategy):
         if observation_type == ObservationType.Hit:
             reward = 1
             terminal = False
-        elif observation_type == ObservationType.EvictionPolicy:
-            reward = 0
-            terminal = True
+        # elif observation_type == ObservationType.EvictionPolicy:
+        #     reward = 0
+        #     terminal = True
         else:
             reward = difference_in_ttl
+            if abs(difference_in_ttl) < 10:
+                reward = 10
             terminal = True
-
-        self.logger.debug(f'Hits: {final_state.hit_count}, ttl diff: {difference_in_ttl}, Reward: {reward}')
+            self.logger.debug(f'Hits: {final_state.hit_count}, ttl diff: {difference_in_ttl}, Reward: {reward}')
 
         self.agent.observe(preprocessed_states=experience.starting_state.to_numpy(),
                            actions=experience.agent_action,
@@ -143,7 +144,6 @@ class RLTtlStrategy(TtlStrategy):
 
         self.cum_reward += reward
         self.reward_logger.info(f'{self.episode_num},{reward}')
-        # TODO use self.agent.update_schedule to decide when to call update
         loss = self.agent.update()
         if loss is not None:
             self.loss_logger.info(f'{self.episode_num},{loss[0]}')

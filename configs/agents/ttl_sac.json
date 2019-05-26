@@ -1,32 +1,33 @@
 {
   "name": "ttl_sac_network",
   "type": "sac",
-  "discount": 0.99,
+  "discount": 0.995,
   "initial_alpha": 1.0,
+  "target_entropy": -1.0,
   "double_q": true,
   "memory_spec": {
     "type": "prioritized_replay",
     "capacity": 1000
   },
   "observe_spec": {
-    "buffer_size": 1000
+    "buffer_size": 200
   },
   "network_spec": [
     {
       "type": "dense",
-      "units": 64,
+      "units": 256,
       "activation": "relu",
       "scope": "hidden1"
     },
     {
       "type": "dense",
-      "units": 64,
+      "units": 256,
       "activation": "relu",
       "scope": "hidden2"
     },
     {
       "type": "dense",
-      "units": 64,
+      "units": 256,
       "activation": "relu",
       "scope": "hidden3"
     }
@@ -34,29 +35,30 @@
   "value_function_spec": [
     {
       "type": "dense",
-      "units": 64,
+      "units": 256,
       "activation": "relu",
       "scope": "vf-hidden1"
     },
     {
       "type": "dense",
-      "units": 64,
+      "units": 256,
       "activation": "relu",
       "scope": "vf-hidden2"
     },
     {
       "type": "dense",
-      "units": 64,
+      "units": 256,
       "activation": "relu",
       "scope": "vf-hidden3"
     }
   ],
+
   "update_spec": {
     "do_updates": true,
-    "update_interval": 4,
-    "steps_before_update": 4,
-    "batch_size": 512,
-    "sync_interval": 4,
+    "update_interval": 1,
+    "sync_interval": 1,
+    "sync_tau": 5e-3,
+    "batch_size": 256,
     "num_iterations": 1
   },
   "optimizer_spec": {
