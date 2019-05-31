@@ -1,8 +1,8 @@
 {
-  "experiment_name": "simple_strategy_read_only",
+  "experiment_name": "simple_strategy_lfu",
   "cache_backend_settings": {
     "type": "cache_inmemory",
-    "capacity": 5000
+    "capacity": 1000
   },
   "database_backend_settings": {
     "type": "inmemory"
@@ -17,7 +17,7 @@
       "ttl": 60
     },
     "eviction_strategy_settings": {
-      "type": "lru"
+      "type": "lfu"
     }
   }
 }

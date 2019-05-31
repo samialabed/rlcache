@@ -111,7 +111,7 @@ class RLTtlStrategy(TtlStrategy):
                              f'{experience.agent_action.item()},{experience.state.hit_count}')
         experience.state.step_code = observation_type.value
 
-        self.reward_agent(observation_type, experience, self.maximum_ttl)
+        self.reward_agent(observation_type, experience, experience.agent_action.item())
 
     def reward_agent(self, observation_type: ObservationType,
                      experience: TTLAgentObservedExperience,
@@ -159,6 +159,5 @@ class RLTtlStrategy(TtlStrategy):
         self._incomplete_experiences.clear()
         try:
             self.agent.reset()
-            self.agent.reset_env_buffers()
         except Exception as e:
             self.errors.info(e)

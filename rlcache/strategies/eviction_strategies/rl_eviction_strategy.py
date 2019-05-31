@@ -3,6 +3,8 @@ from typing import Dict, List
 
 import time
 from pandas.tests.extension.numpy_.test_numpy_nested import np
+from rlgraph.agents import Agent
+from rlgraph.spaces import FloatBox, IntBox
 
 from rlcache.backend import TTLCache, InMemoryStorage
 from rlcache.cache_constants import CacheInformation
@@ -13,8 +15,6 @@ from rlcache.strategies.eviction_strategies.rl_eviction_state import EvictionAge
 from rlcache.strategies.eviction_strategies.rl_eviction_state_converter import EvictionStrategyRLConverter
 from rlcache.utils.loggers import create_file_logger
 from rlcache.utils.vocabulary import Vocabulary
-from rlgraph.agents import Agent
-from rlgraph.spaces import FloatBox, IntBox
 
 
 class RLEvictionStrategy(EvictionStrategy):
@@ -55,7 +55,7 @@ class RLEvictionStrategy(EvictionStrategy):
         keys_to_evict = []
         keys_to_not_evict = []
 
-        for (key, cached_key) in self.view_of_the_cache.items():
+        for (key, cached_key) in list(self.view_of_the_cache.items()):
             agent_system_state = cached_key['state']
 
             agent_action = self.agent.get_action(agent_system_state.to_numpy())
@@ -70,20 +70,15 @@ class RLEvictionStrategy(EvictionStrategy):
             # observe the key for only the ttl period that is left for this key
             ttl_left = (cached_key['observation_time'] + agent_system_state.ttl) - decision_time
             self._incomplete_experiences.set(key=key, values=incomplete_experience, ttl=ttl_left)
-
             if should_evict:
+                del self.view_of_the_cache[key]
                 keys_to_evict.append(key)
+                if not cache.contains(key, clean_expire=False):
+                    # race condition, clean up and move on
+                    self._incomplete_experiences.delete(key)
+                cache.delete(key)
             else:
                 keys_to_not_evict.append(key)
-
-        for key in keys_to_evict:
-            # race condition: while in this loop a key expires and hit the observer pattern
-            if key in self.view_of_the_cache:
-                del self.view_of_the_cache[key]
-            if not cache.contains(key):
-                # race condition, clean up and move on
-                self._incomplete_experiences.delete(key)
-            cache.delete(key)
 
         return keys_to_evict
 
@@ -93,9 +88,20 @@ class RLEvictionStrategy(EvictionStrategy):
         observed_key = self.converter.vocabulary.add_or_get_id(key)
         stored_experience = self._incomplete_experiences.get(key)
         if observation_type == ObservationType.Write:
+            if stored_experience is not None:
+                # race condition
+                reward = self.converter.system_to_agent_reward(stored_experience,
+                                                               ObservationType.Miss,
+                                                               self.episode_num)
+                state = stored_experience.state
+                action = stored_experience.agent_action
+                new_state = state.copy()
+                new_state.step_code = ObservationType.Miss.value
+
+                self._reward_agent(state.to_numpy(), new_state.to_numpy(), action, reward)
+                self._incomplete_experiences.delete(key)
+
             # New item to write into cache view and observe.
-            assert stored_experience is None, \
-                "Write observation should be precede with end of an episode operation."
             ttl = info['ttl']
             observation_time = time.time()
             self.view_of_the_cache[key] = {'state': EvictionAgentSystemState(encoded_key=observed_key,

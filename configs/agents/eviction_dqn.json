@@ -3,20 +3,19 @@
   "type": "dqn",
   "memory_spec": {
     "type": "prioritized_replay",
-    "capacity": 1000
+    "capacity": 500
   },
-  "policy_spec": {
-  },
+  "policy_spec": {},
   "network_spec": [
     {
       "type": "dense",
-      "units": 128,
+      "units": 64,
       "activation": "relu",
       "scope": "hidden1"
     },
     {
       "type": "dense",
-      "units": 128,
+      "units": 64,
       "activation": "relu",
       "scope": "hidden2"
     }
@@ -38,9 +37,9 @@
       "decay_spec": {
         "type": "linear_decay",
         "from": 1.0,
-        "to": 0.2,
+        "to": 0.1,
         "start_timestep": 0,
-        "num_timesteps": 50000
+        "num_timesteps": 500000
       }
     }
   }

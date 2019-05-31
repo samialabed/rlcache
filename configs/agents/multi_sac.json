@@ -5,8 +5,11 @@
   "initial_alpha": 1.0,
   "double_q": true,
   "memory_spec": {
+    "type": "prioritized_replay",
+    "capacity": 500
   },
   "observe_spec": {
+    "buffer_size": 200
   },
   "network_spec": [
     {
@@ -50,7 +53,7 @@
   ],
   "execution_spec": {
     "gpu_spec": {
-      "gpus_enabled": true
+      "gpus_enabled": false
     }
   },
   "update_spec": {

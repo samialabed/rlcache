@@ -51,8 +51,9 @@ class TTLCache(object):
     def size(self) -> int:
         return self.memory.size()
 
-    def contains(self, key: str):
-        self.expire(time.time())
+    def contains(self, key: str, clean_expire=True):
+        if clean_expire:
+            self.expire(time.time())
         return self.memory.contains(key)
 
     def get(self, key: str, default=None):

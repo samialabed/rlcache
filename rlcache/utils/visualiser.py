@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import time
 
+CAPACITIES = [100, 1000, 2500, 5000]
+
 ''' collection of tools to help visualise and fix missing data points in collected data.'''
 caching_strategy_dir = 'caching_strategy'
 eviction_strategy_dir = 'eviction_strategy'
@@ -13,7 +15,9 @@ eviction_strategy_dir = 'eviction_strategy'
 eviction_name = {
     'simple_strategy': 'lru_eviction_strategy',
     'simple_strategy_fifo': 'fifo_eviction_strategy',
-    'rl_eviction_strategy': 'rl_eviction_strategy'}
+    'rl_eviction_strategy': 'rl_eviction_strategy',
+    'simple_strategy_lfu': 'lfu_eviction_strategy',
+}
 
 
 def plot_hitrate(means: pd.Series, errors: pd.Series):
@@ -37,9 +41,41 @@ def plot_everything_hit_rate(directory: str, methods: List):
     res_5000_df.plot(yerr=err_5000_df, ax=ax[1][1], title='Capacity 5000')
 
 
-def save_everything_hit_rate(directory: str, methods: List, output: str, overwrite_cols: Dict[str, str]):
-    capacities = [100, 1000, 2500, 5000]
-    # capacities = [100]
+def save_zoomed_hit_rate(directory: str, output: str, capacity: int):
+    method_directory = f'{directory}/cache_capacity_{capacity}'
+    sub_dirs = os.listdir(method_directory)
+    hit_rate_df = pd.DataFrame()
+
+    for sub_dir in sub_dirs:
+        stats_df = pd.read_csv(f'{method_directory}/{sub_dir}/evaluation_logger.log',
+                               names=['timestamp', 'key', 'observation', 'episode'],
+                               usecols=['episode', 'observation', 'key'])
+        stats = stats_df.groupby([(stats_df.index // 1000), 'episode', 'observation']).count().unstack(0)['key'].fillna(
+            0).transpose()
+        zoomed_stats = (stats[1]['Hit'] / stats[1].sum(axis=1)).dropna()
+        hit_rate_df[f'{sub_dir}'] = zoomed_stats
+
+    hit_rate_df.index = hit_rate_df.index * 1000
+    means = hit_rate_df.mean(axis=1)
+    errors = hit_rate_df.std(axis=1)
+    ax = means.plot.line(yerr=errors)
+    ax.set_xlabel('Observation')
+    ax.set_ylabel('Hit Ratio')
+    ax.set_title(f'Cache Capacity {capacity}')
+    fig = ax.get_figure()
+    fig.savefig(f'{output}/hitrate_zoomed_{capacity}.pdf')
+
+    return means, errors
+
+
+def save_everything_hit_rate(directory: str,
+                             methods: List,
+                             output: str,
+                             overwrite_cols: Dict[str, str],
+                             capacities: List = None
+                             ):
+    if capacities is None:
+        capacities = CAPACITIES
     for capacity in capacities:
         means, errors = calculate_hitrate_with_varying_methods(directory, methods, capacity)
         means.rename(columns=overwrite_cols, inplace=True)
@@ -53,14 +89,21 @@ def save_everything_hit_rate(directory: str, methods: List, output: str, overwri
         # TODO make it save to location
 
 
-def save_everything_f1(directory: str, methods: List, output: str, overwrite_cols: Dict[str, str], metric='f1'):
-    capacities = [100, 1000, 2500, 5000]
+def save_everything_f1(directory: str,
+                       methods: List,
+                       output: str,
+                       overwrite_cols:
+                       Dict[str, str],
+                       metric='f1',
+                       capacities: List = None
+                       ):
+    if capacities is None:
+        capacities = CAPACITIES
     label_map = {'f1': 'F1 Score',
                  'manual_evicts': 'Manual Evictions',
                  'precision': 'Precision Score'
                  }
 
-    # capacities = [100]
     for capacity in capacities:
         means, errors = calculate_eviction_score_with_varying_methods(directory, methods, capacity, metric)
         means.rename(columns=overwrite_cols, inplace=True)
@@ -74,9 +117,14 @@ def save_everything_f1(directory: str, methods: List, output: str, overwrite_col
         # TODO make it save to location
 
 
-def save_everything_cache_rate(directory: str, methods: List, output: str, overwrite_cols: Dict[str, str]):
-    capacities = [100, 1000, 2500, 5000]
-    # capacities = [100]
+def save_everything_cache_rate(directory: str,
+                               methods: List,
+                               output: str,
+                               overwrite_cols: Dict[str, str],
+                               capacities: List = None
+                               ):
+    if capacities is None:
+        capacities = CAPACITIES
     for capacity in capacities:
         means, errors = calculate_cache_rate_with_varying_methods(directory, methods, capacity)
         means.rename(columns=overwrite_cols, inplace=True)
@@ -115,7 +163,7 @@ def calculate_hitrate_with_varying_methods(directory: str, methods: List, capaci
 def calculate_hitrate_on_varying_capacity(directory: str,
                                           capacities: List = None) -> Dict[str, Tuple[pd.Series, pd.Series]]:
     if capacities is None:
-        capacities = [100, 1000, 2500, 5000]
+        capacities = CAPACITIES
     res = {}
     for capacity in capacities:
         means, errors = calculate_hitrate(f'{directory}/cache_capacity_{capacity}/')
