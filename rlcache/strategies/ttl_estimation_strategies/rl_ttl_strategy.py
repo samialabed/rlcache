@@ -119,7 +119,7 @@ class RLTtlStrategy(TtlStrategy):
         # reward more utilisation of the cache capacity given more hits
         final_state = experience.state
 
-        difference_in_ttl = -abs((experience.agent_action.item() + 1) / min(real_ttl, self.maximum_ttl))
+        difference_in_ttl = -abs((experience.agent_action.item() + 1) / max(min(real_ttl, self.maximum_ttl), 1))
         # reward = final_state.hit_count - abs(difference_in_ttl * self.cache_stats.cache_utility)
 
         if observation_type == ObservationType.Hit:
