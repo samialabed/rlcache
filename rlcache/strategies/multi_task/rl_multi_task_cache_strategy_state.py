@@ -29,8 +29,9 @@ class MultiTaskAgentSystemState(AgentSystemState):
 
 @dataclass
 class MultiTaskAgentObservedExperience(object):
-    __slots__ = ['state', 'agent_action', 'starting_state', 'observation_time']
+    __slots__ = ['state', 'agent_action', 'starting_state', 'observation_time', 'manual_eviction']
     state: MultiTaskAgentSystemState
     agent_action: np.ndarray
     starting_state: MultiTaskAgentSystemState
     observation_time: float
+    manual_eviction: bool

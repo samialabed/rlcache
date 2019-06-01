@@ -3,7 +3,7 @@ from typing import Dict
 
 import time
 from rlgraph.agents import Agent
-from rlgraph.spaces import Dict as RLDict
+from rlgraph.spaces import Dict as RLDict, IntBox
 from rlgraph.spaces import FloatBox
 
 from rlcache.backend import InMemoryStorage, TTLCache
@@ -40,9 +40,9 @@ class RLMultiTasksStrategy(BaseStrategy):
         fields_in_state = len(MultiTaskAgentSystemState.__slots__)
 
         action_space = RLDict({
-            'ttl': FloatBox(low=0, high=self.maximum_ttl, shape=(1,)),
-            'eviction': FloatBox(low=0, high=1, shape=(1,))
-        }, add_batch_rank=True)
+            'ttl': IntBox(low=0, high=self.maximum_ttl),
+            'eviction': IntBox(low=0, high=2)
+        })
 
         self.agent = Agent.from_spec(agent_config,
                                      state_space=FloatBox(shape=(fields_in_state,)),
@@ -55,6 +55,7 @@ class RLMultiTasksStrategy(BaseStrategy):
         self.loss_logger = create_file_logger(name=f'{name}_loss_logger', result_dir=self.result_dir)
         self.ttl_logger = create_file_logger(name=f'{name}_ttl_logger', result_dir=self.result_dir)
         self.observation_logger = create_file_logger(name=f'{name}_observation_logger', result_dir=self.result_dir)
+        self.performance_logger = create_file_logger(name=f'{name}_performance_logger', result_dir=self.result_dir)
         self.key_vocab = Vocabulary()
 
     def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
@@ -96,20 +97,23 @@ class RLMultiTasksStrategy(BaseStrategy):
 
         for (key, stored_experience) in list(self._incomplete_experiences.items()):
             action = self.agent.get_action(stored_experience.state.to_numpy())['eviction']
-            evict = action.item() > 0.5
+            evict = (action.flatten() == 1).item()
             if evict:
                 cache.delete(key)
                 keys_to_evict.append(key)
             # update stored value for eviction action
             stored_experience.agent_action['eviction'] = action
+            stored_experience.manual_eviction = True
 
         return keys_to_evict
 
     def should_cache(self, key: str, values: Dict[str, str], ttl: int, operation_type: OperationType) -> bool:
         # cache objects that have TTL more than 1 second (maybe make this configurable?)
-        return ttl > 2
+        return ttl > 10
 
     def estimate_ttl(self, key: str, values: Dict[str, any], operation_type: OperationType) -> float:
+        # TODO check if it is in the observed queue
+
         observation_time = time.time()
         encoded_key = self.key_vocab.add_or_get_id(key)
         cache_utility = self.cache_stats.cache_utility
@@ -128,7 +132,8 @@ class RLMultiTasksStrategy(BaseStrategy):
         incomplete_experience = MultiTaskAgentObservedExperience(state=state,
                                                                  agent_action=agent_action,
                                                                  starting_state=state.copy(),
-                                                                 observation_time=observation_time)
+                                                                 observation_time=observation_time,
+                                                                 manual_eviction=False)
         self._incomplete_experiences.set(key, incomplete_experience, self.maximum_ttl)
 
         return action
@@ -137,8 +142,14 @@ class RLMultiTasksStrategy(BaseStrategy):
         # reward more utilisation of the cache capacity given more hits
         final_state = experience.state
 
+        # difference_in_ttl = -abs((experience.agent_action.item() + 1) / min(real_ttl, self.maximum_ttl))
+
         reward = experience.state.hit_count
-        if observation_type == observation_type.Invalidate:
+        if observation_type == observation_type.Invalidate and (
+                experience.agent_action['ttl'] < 10 or (experience.agent_action['eviction'].flatten() == 1).item()):
+            # if evicted or not cached, followed by an invalidate
+            reward += 10
+        if observation_type == observation_type.Invalidate or observation_type == observation_type.Miss:
             reward -= 10
         elif observation_type == observation_type.Expiration:
             reward += 10
@@ -149,6 +160,9 @@ class RLMultiTasksStrategy(BaseStrategy):
                            rewards=reward,
                            next_states=final_state.to_numpy(),
                            terminals=True)
+
+        if experience.manual_eviction:
+            self.performance_metric_for_eviction(experience, observation_type)
 
         self.cum_reward += reward
         self.reward_logger.info(f'{self.episode_num},{reward}')
@@ -170,8 +184,51 @@ class RLMultiTasksStrategy(BaseStrategy):
 
         self.reward_agent(observation_type, experience)
 
+    def performance_metric_for_eviction(self,
+                                        stored_experience: MultiTaskAgentObservedExperience,
+                                        observation_type: ObservationType) -> int:
+        should_evict = (stored_experience.agent_action['eviction'].flatten() == 1).item()
+
+        if observation_type == ObservationType.Expiration:
+            if should_evict:
+                # reward if should evict didn't observe any follow up miss
+                self.performance_logger.info(f'{self.episode_num},TrueEvict')
+            # else didn't evict
+            else:
+                # reward for not evicting a key that received more hits.
+                # or 0 if it didn't evict but also didn't get any hits
+                gain_for_not_evicting = stored_experience.state.hit_count - stored_experience.starting_state.hit_count
+                if gain_for_not_evicting > 0:
+                    self.performance_logger.info(f'{self.episode_num},TrueMiss')
+                else:
+                    self.performance_logger.info(f'{self.episode_num},MissEvict')
+
+                return gain_for_not_evicting
+
+        elif observation_type == ObservationType.Invalidate:
+            # Set/Delete, remove entry from the cache.
+            # reward an eviction followed by invalidation.
+            if should_evict:
+                self.performance_logger.info(f'{self.episode_num},TrueEvict')
+            else:
+                # punish not evicting a key that got invalidated after.
+                self.performance_logger.info(f'{self.episode_num},MissEvict')
+
+        elif observation_type == ObservationType.Miss:
+            if should_evict:
+                self.performance_logger.info(f'{self.episode_num},FalseEvict')
+            # Miss after making an eviction decision
+            # Punish, a read after an eviction decision
+
     def close(self):
+        for (k, v) in list(self._incomplete_experiences.items()):
+            self.ttl_logger.info(
+                f'{self.episode_num},{ObservationType.EndOfEpisode.name},{k},{v.agent_action["ttl"].item()},'
+                f'{v.agent_action["ttl"].item()},{v.state.hit_count}')
+            self.performance_logger.info(f'{self.episode_num},TrueMiss')
         super().close()
         self._incomplete_experiences.clear()
-        self.agent.reset()
-        self.agent.reset_env_buffers()
+        try:
+            self.agent.reset()
+        except Exception as e:
+            pass

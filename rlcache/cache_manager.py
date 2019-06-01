@@ -19,10 +19,12 @@ class CacheManager(object):
         if 'multi_strategy_settings' in config:
             # any of the strategies work for multi-strategy
             self.observer_orchestrator = ObserversOrchestrator([self.caching_strategy], result_dir, self.cache_stats)
+            self.multi_strategy = True
         else:
             self.observer_orchestrator = ObserversOrchestrator([self.caching_strategy,
                                                                 self.eviction_strategy,
                                                                 self.ttl_strategy], result_dir, self.cache_stats)
+            self.multi_strategy = False
 
         self.cache.expired_entry_callback(self.observer_orchestrator.observe)
 
@@ -63,12 +65,16 @@ class CacheManager(object):
         return str(self.cache_stats)
 
     def close(self):
-        self.ttl_strategy.close()
-        self.caching_strategy.close()
-        self.eviction_strategy.close()
+        if self.multi_strategy:
+            self.ttl_strategy.close()
+        else:
+            self.ttl_strategy.close()
+            self.caching_strategy.close()
+            self.eviction_strategy.close()
+
         self.observer_orchestrator.close()
         self.cache_stats.close()
-        
+
     def _set(self, key: str, values: Dict[str, any], operation_type: OperationType) -> None:
         ttl = self.ttl_strategy.estimate_ttl(key, values, operation_type)
         should_cache = self.caching_strategy.should_cache(key, values, ttl, operation_type)

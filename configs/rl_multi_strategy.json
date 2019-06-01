@@ -15,7 +15,7 @@
       "state_configs": {
         "value_field_length": 10
       },
-      "agent_config": "configs/agents/multi_sac.json"
+      "agent_config": "configs/agents/multi_dqn.json"
     }
   }
 }

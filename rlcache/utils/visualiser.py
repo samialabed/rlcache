@@ -17,6 +17,8 @@ eviction_name = {
     'simple_strategy_fifo': 'fifo_eviction_strategy',
     'rl_eviction_strategy': 'rl_eviction_strategy',
     'simple_strategy_lfu': 'lfu_eviction_strategy',
+    'rl_all_strategy': 'rl_eviction_strategy',
+    'rl_multi_strategy': 'rl_multi_strategy'
 }
 
 
@@ -41,7 +43,9 @@ def plot_everything_hit_rate(directory: str, methods: List):
     res_5000_df.plot(yerr=err_5000_df, ax=ax[1][1], title='Capacity 5000')
 
 
-def save_zoomed_hit_rate(directory: str, output: str, capacity: int):
+def save_zoomed_hit_rate(directory: str,
+                         output: str,
+                         capacity: int):
     method_directory = f'{directory}/cache_capacity_{capacity}'
     sub_dirs = os.listdir(method_directory)
     hit_rate_df = pd.DataFrame()
@@ -72,8 +76,7 @@ def save_everything_hit_rate(directory: str,
                              methods: List,
                              output: str,
                              overwrite_cols: Dict[str, str],
-                             capacities: List = None
-                             ):
+                             capacities: List = None):
     if capacities is None:
         capacities = CAPACITIES
     for capacity in capacities:
@@ -292,9 +295,14 @@ def calculate_eviction_score(directory: str,
             eviction_performance_df = fix_missing_episode_in_eviction(f'{directory}/{sub_dir}',
                                                                       eviction_name)
         else:
-            eviction_performance_df = pd.read_csv(
-                f'{directory}/{sub_dir}/eviction_strategy/{eviction_name}_performance_logger.log',
-                names=['timestamp', 'episode', 'state'])
+            if eviction_name == 'rl_multi_strategy':
+                eviction_performance_df = pd.read_csv(
+                    f'{directory}/{sub_dir}/multi_strategy/{eviction_name}_performance_logger.log',
+                    names=['timestamp', 'episode', 'state'])
+            else:
+                eviction_performance_df = pd.read_csv(
+                    f'{directory}/{sub_dir}/eviction_strategy/{eviction_name}_performance_logger.log',
+                    names=['timestamp', 'episode', 'state'])
         eviction_performance = eviction_performance_df.groupby(['episode', 'state']
                                                                ).count().unstack(0)['timestamp'].fillna(0).transpose()
         precision, recall, f1 = calculate_f1_measure(eviction_performance)
