@@ -12,14 +12,78 @@ CAPACITIES = [100, 1000, 2500, 5000]
 caching_strategy_dir = 'caching_strategy'
 eviction_strategy_dir = 'eviction_strategy'
 
-eviction_name = {
+EVICTION_METHOD_TO_LOGGER_MAP = {
     'simple_strategy': 'lru_eviction_strategy',
     'simple_strategy_fifo': 'fifo_eviction_strategy',
     'rl_eviction_strategy': 'rl_eviction_strategy',
     'simple_strategy_lfu': 'lfu_eviction_strategy',
     'rl_all_strategy': 'rl_eviction_strategy',
-    'rl_multi_strategy': 'rl_multi_strategy'
+    'rl_multi_strategy': 'rl_multi_strategy',
 }
+TTL_METHOD_TO_LOGGER_MAP = {
+    'rl_ttl_strategy': 'rl_ttl_strategy',
+    'fixed_value': 'rl_ttl_strategy',
+    'simple_strategy': 'fixed_strategy',
+}
+
+
+def calculate_ttl_diff(directory, method):
+    sub_dirs = os.listdir(directory)
+    write_ratio_df = pd.DataFrame({'write_ratio': [0, 5, 10, 25, 50, 100]})
+    write_ratio_df = write_ratio_df.set_index('write_ratio')
+    name = TTL_METHOD_TO_LOGGER_MAP[method]
+    for sub_dir in sub_dirs:
+        observations_df = pd.read_csv(f'{directory}/{sub_dir}/ttl_strategy/{name}_ttl_logger.log',
+                                      names=['timestamp', 'episode', 'observation',
+                                             'key', 'ttl', 'real_ttl', 'hits'],
+                                      usecols=['episode', 'ttl', 'real_ttl', 'observation'])
+        # if rl_ttl
+        observations_df['episode'] = observations_df['episode'] + np.where(
+            'EndOfEpisode' == observations_df['observation'],
+            -1, 0)
+        observations_df['rlcache_ttl'] = (observations_df['ttl'] - observations_df['real_ttl'])
+        observations_df['fixed_ttl'] = (60 - observations_df['real_ttl'])
+        print(f'{directory}/{sub_dir}')
+        ttl_diff_all = observations_df.groupby('episode').mean()[['rlcache_ttl', 'fixed_ttl']]
+        ttl_diff_all.index = write_ratio_df.index
+        if method == 'rl_ttl_strategy':
+            write_ratio_df[sub_dir] = ttl_diff_all['rlcache_ttl']
+        elif method == 'fixed_value':
+            write_ratio_df[sub_dir] = ttl_diff_all['fixed_ttl']
+
+    means = write_ratio_df.mean(axis=1)
+    errors = write_ratio_df.std(axis=1)
+    return means, errors
+
+
+def calculate_ttl_diff_varying_methods(directory, methods, capacity):
+    res_df = pd.DataFrame()
+    errs_df = pd.DataFrame()
+
+    for method in methods:
+        res_df[f'{method}'], errs_df[f'{method}'] = calculate_ttl_diff(
+            f'{directory}/rl_ttl_strategy/cache_capacity_{capacity}', method)
+
+    return res_df, errs_df
+
+
+def save_ttl_diff(directory: str,
+                  methods: List,
+                  output: str,
+                  overwrite_cols: Dict[str, str],
+                  capacities: List = None):
+    if capacities is None:
+        capacities = CAPACITIES
+    for capacity in capacities:
+        means, errors = calculate_ttl_diff_varying_methods(directory, methods, capacity)
+        means.rename(columns=overwrite_cols, inplace=True)
+        errors.rename(columns=overwrite_cols, inplace=True)
+        ax = means.plot.line(yerr=errors)
+        ax.set_xlabel('Write Ratio (%)')
+        ax.set_ylabel('Difference from optimal TTL')
+        ax.set_title(f'Cache Capacity {capacity}')
+        fig = ax.get_figure()
+        fig.savefig(f'{output}/ttl_diff_{capacity}.pdf')
 
 
 def plot_hitrate(means: pd.Series, errors: pd.Series):
@@ -89,7 +153,6 @@ def save_everything_hit_rate(directory: str,
         ax.set_title(f'Cache Capacity {capacity}')
         fig = ax.get_figure()
         fig.savefig(f'{output}/hitrate_{capacity}.pdf')
-        # TODO make it save to location
 
 
 def save_everything_f1(directory: str,
@@ -243,6 +306,7 @@ def calculate_hitrate(directory: str, q95=False) -> Tuple[pd.Series, pd.Series]:
             stats = stats_df.groupby(['episode', 'observation']).count().unstack(0)['key'].fillna(0).transpose()
             hit_ratio_all = stats['Hit'] / stats.sum(axis=1)
 
+        print(f'{directory}/{sub_dir}')
         hit_ratio_all.index = write_ratio_df.index
         write_ratio_df[sub_dir] = hit_ratio_all
 
@@ -258,7 +322,7 @@ def calculate_eviction_score_with_varying_methods(directory: str, methods: List,
     for method in methods:
         precision_df, recall_df, f1_df, manual_evicts_df = calculate_eviction_score(
             f'{directory}/{method}/cache_capacity_{capacity}',
-            eviction_name[method])
+            EVICTION_METHOD_TO_LOGGER_MAP[method])
 
         if metric == 'f1':
             res_df[f'{method}'] = f1_df.mean(axis=1)
