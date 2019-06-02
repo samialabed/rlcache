@@ -80,8 +80,9 @@ class RLMultiTasksStrategy(BaseStrategy):
             # log the difference between the estimated ttl and real ttl
             self.ttl_logger.info(
                 f'{self.episode_num},{observation_type.name},{key},{estimated_ttl},{real_ttl},{stored_state.hit_count}')
-            self.reward_agent(observation_type, observed_experience)
             self._incomplete_experiences.delete(key)
+
+        self.reward_agent(observation_type, observed_experience)
 
         self.observation_seen += 1
         if self.observation_seen % self.checkpoint_steps == 0:
@@ -104,6 +105,9 @@ class RLMultiTasksStrategy(BaseStrategy):
             # update stored value for eviction action
             stored_experience.agent_action['eviction'] = action
             stored_experience.manual_eviction = True
+
+        if len(keys_to_evict) == 0:
+            self.logger.error('trim_cache No keys were evicted.')
 
         return keys_to_evict
 
@@ -143,26 +147,36 @@ class RLMultiTasksStrategy(BaseStrategy):
         final_state = experience.state
 
         # difference_in_ttl = -abs((experience.agent_action.item() + 1) / min(real_ttl, self.maximum_ttl))
+        reward = 0
+        terminal = False
 
-        reward = experience.state.hit_count
         if observation_type == observation_type.Invalidate and (
                 experience.agent_action['ttl'] < 10 or (experience.agent_action['eviction'].flatten() == 1).item()):
             # if evicted or not cached, followed by an invalidate
-            reward += 10
-        if observation_type == observation_type.Invalidate or observation_type == observation_type.Miss:
-            reward -= 10
-        elif observation_type == observation_type.Expiration:
-            reward += 10
+            reward = 10
+            terminal = True
+        elif observation_type == observation_type.Invalidate or observation_type == observation_type.Miss:
+            reward = -10
+            terminal = True
+        elif observation_type == ObservationType.Hit:
+            terminal = False
+            reward = 1
+
+        if experience.manual_eviction:
+            if observation_type == observation_type.Expiration:
+                reward = -10
+                terminal = True
+            if observation_type == observation_type.Hit:
+                reward = 2
+
+            self.performance_metric_for_eviction(experience, observation_type)
 
         self.agent.observe(preprocessed_states=experience.starting_state.to_numpy(),
                            actions=experience.agent_action,
                            internals=[],
-                           rewards=reward,
+                           rewards=terminal,
                            next_states=final_state.to_numpy(),
                            terminals=True)
-
-        if experience.manual_eviction:
-            self.performance_metric_for_eviction(experience, observation_type)
 
         self.cum_reward += reward
         self.reward_logger.info(f'{self.episode_num},{reward}')
