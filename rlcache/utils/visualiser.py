@@ -24,6 +24,7 @@ TTL_METHOD_TO_LOGGER_MAP = {
     'rl_ttl_strategy': 'rl_ttl_strategy',
     'fixed_value': 'rl_ttl_strategy',
     'simple_strategy': 'fixed_strategy',
+    'rl_multi_strategy': 'rl_multi_strategy'
 }
 
 
@@ -32,15 +33,20 @@ def calculate_ttl_diff(directory, method):
     write_ratio_df = pd.DataFrame({'write_ratio': [0, 5, 10, 25, 50, 100]})
     write_ratio_df = write_ratio_df.set_index('write_ratio')
     name = TTL_METHOD_TO_LOGGER_MAP[method]
+    if name == 'rl_multi_strategy':
+        ttl_dir = 'multi_strategy'
+    else:
+        ttl_dir = 'ttl_strategy'
     for sub_dir in sub_dirs:
-        observations_df = pd.read_csv(f'{directory}/{sub_dir}/ttl_strategy/{name}_ttl_logger.log',
+        observations_df = pd.read_csv(f'{directory}/{sub_dir}/{ttl_dir}/{name}_ttl_logger.log',
                                       names=['timestamp', 'episode', 'observation',
                                              'key', 'ttl', 'real_ttl', 'hits'],
                                       usecols=['episode', 'ttl', 'real_ttl', 'observation'])
         # if rl_ttl
-        observations_df['episode'] = observations_df['episode'] + np.where(
-            'EndOfEpisode' == observations_df['observation'],
-            -1, 0)
+        if name == 'rl_ttl_strategy':
+            observations_df['episode'] = observations_df['episode'] + np.where(
+                'EndOfEpisode' == observations_df['observation'],
+                -1, 0)
         observations_df['rlcache_ttl'] = (observations_df['ttl'] - observations_df['real_ttl'])
         observations_df['fixed_ttl'] = (60 - observations_df['real_ttl'])
         print(f'{directory}/{sub_dir}')
@@ -50,6 +56,8 @@ def calculate_ttl_diff(directory, method):
             write_ratio_df[sub_dir] = ttl_diff_all['rlcache_ttl']
         elif method == 'fixed_value':
             write_ratio_df[sub_dir] = ttl_diff_all['fixed_ttl']
+        else:
+            write_ratio_df[sub_dir] = ttl_diff_all['rlcache_ttl']
 
     means = write_ratio_df.mean(axis=1)
     errors = write_ratio_df.std(axis=1)
@@ -62,7 +70,7 @@ def calculate_ttl_diff_varying_methods(directory, methods, capacity):
 
     for method in methods:
         res_df[f'{method}'], errs_df[f'{method}'] = calculate_ttl_diff(
-            f'{directory}/rl_ttl_strategy/cache_capacity_{capacity}', method)
+            f'{directory}/{method}/cache_capacity_{capacity}', method)
 
     return res_df, errs_df
 
