@@ -117,7 +117,8 @@ def plot_everything_hit_rate(directory: str, methods: List):
 
 def save_zoomed_hit_rate(directory: str,
                          output: str,
-                         capacity: int):
+                         capacity: int,
+                         overwrite_filename: str = 'hitrate_zoomed'):
     method_directory = f'{directory}/cache_capacity_{capacity}'
     sub_dirs = os.listdir(method_directory)
     hit_rate_df = pd.DataFrame()
@@ -139,7 +140,7 @@ def save_zoomed_hit_rate(directory: str,
     ax.set_ylabel('Hit Ratio')
     ax.set_title(f'Cache Capacity {capacity}')
     fig = ax.get_figure()
-    fig.savefig(f'{output}/hitrate_zoomed_{capacity}.pdf')
+    fig.savefig(f'{output}/{overwrite_filename}_{capacity}.pdf')
 
     return means, errors
 
@@ -148,7 +149,8 @@ def save_everything_hit_rate(directory: str,
                              methods: List,
                              output: str,
                              overwrite_cols: Dict[str, str],
-                             capacities: List = None):
+                             capacities: List = None,
+                             overwrite_file_name: str = 'hitrate'):
     if capacities is None:
         capacities = CAPACITIES
     for capacity in capacities:
@@ -160,7 +162,7 @@ def save_everything_hit_rate(directory: str,
         ax.set_ylabel('Hit Ratio')
         ax.set_title(f'Cache Capacity {capacity}')
         fig = ax.get_figure()
-        fig.savefig(f'{output}/hitrate_{capacity}.pdf')
+        fig.savefig(f'{output}/{overwrite_file_name}_{capacity}.pdf')
 
 
 def save_everything_f1(directory: str,
@@ -195,7 +197,8 @@ def save_everything_cache_rate(directory: str,
                                methods: List,
                                output: str,
                                overwrite_cols: Dict[str, str],
-                               capacities: List = None
+                               capacities: List = None,
+                               overwrite_filename: str = 'cache_rate'
                                ):
     if capacities is None:
         capacities = CAPACITIES
@@ -210,7 +213,7 @@ def save_everything_cache_rate(directory: str,
         ax.set_ylabel('Cache Ratio')
         ax.set_title(f'Cache Capacity {capacity}')
         fig = ax.get_figure()
-        fig.savefig(f'{output}/cache_rate_{capacity}.pdf')
+        fig.savefig(f'{output}/{overwrite_filename}_{capacity}.pdf')
 
 
 def calculate_cache_rate_with_varying_methods(directory: str, methods: List, capacity: int):
